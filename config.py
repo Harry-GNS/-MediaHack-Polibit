@@ -6,7 +6,11 @@ proyecto (rutas de datos, nombres de tablas, niveles de comparación, etc.).
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:  # permite importar contratos antes de instalar extras
+    def load_dotenv() -> bool:
+        return False
 
 load_dotenv()
 
@@ -18,9 +22,18 @@ PROCESSED_DIR = DATA_DIR / "processed"
 HISTORICAL_DIR = DATA_DIR / "historical"
 DATABASE_PATH = BASE_DIR / os.getenv("DATABASE_PATH", "data/evidencia.db")
 
-# --- IA ---
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-STRUCTURING_MODEL = "claude-sonnet-4-6"
+# El CNE publica los planes en portales que pueden cambiar entre procesos.
+# Estas rutas son el punto de entrada de la fuente oficial, no copias de
+# terceros. Los adaptadores de src/ingest/cne_scraper.py validan los dominios
+# antes de descargar un documento.
+CNE_REQUEST_TIMEOUT = int(os.getenv("CNE_REQUEST_TIMEOUT", "20"))
+CNE_REQUEST_DELAY_SECONDS = float(os.getenv("CNE_REQUEST_DELAY_SECONDS", "0.7"))
+
+# --- IA (OpenRouter, API compatible con OpenAI) ---
+# Nunca se escriben secretos en este archivo ni en el repositorio.
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat-v3.1")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # --- Fuentes oficiales (completar con endpoints reales durante el hackathon) ---
 CNE_PLANES_URL = os.getenv("CNE_PLANES_URL", "")

@@ -20,10 +20,24 @@ from src.storage.db import guardar_candidato, guardar_promesa, inicializar_db
 from src.validation.validators import validar_promesa
 
 
-def correr_flujo(ruta_pdf: str, candidato_id: str, candidato_nombre: str) -> None:
+def correr_flujo(
+    ruta_pdf: str,
+    candidato_id: str,
+    candidato_nombre: str,
+    proceso_electoral_id: str | None = None,
+    dignidad: str | None = None,
+    organizacion_politica: str | None = None,
+) -> None:
     inicializar_db()
 
-    candidato = Candidato(id=candidato_id, nombre=candidato_nombre, plan_gobierno_url=ruta_pdf)
+    candidato = Candidato(
+        id=candidato_id,
+        nombre=candidato_nombre,
+        plan_gobierno_url=ruta_pdf,
+        proceso_electoral_id=proceso_electoral_id,
+        dignidad=dignidad,
+        organizacion_politica=organizacion_politica,
+    )
     guardar_candidato(candidato)
     print(f"[1/6] Candidato registrado: {candidato_nombre}")
 
@@ -62,6 +76,16 @@ if __name__ == "__main__":
     parser.add_argument("--pdf", required=True, help="Ruta al PDF del plan de gobierno")
     parser.add_argument("--candidato-id", required=True, help="ID corto y único del candidato, p.ej. cand_a")
     parser.add_argument("--candidato-nombre", required=True, help="Nombre a mostrar del candidato")
+    parser.add_argument("--proceso-electoral-id", help="Identificador del proceso, p.ej. seccionales_2027")
+    parser.add_argument("--dignidad", help="Dignidad electoral, p.ej. Alcaldía de Quito")
+    parser.add_argument("--organizacion-politica", help="Organización política que consta en el documento oficial")
     args = parser.parse_args()
 
-    correr_flujo(args.pdf, args.candidato_id, args.candidato_nombre)
+    correr_flujo(
+        args.pdf,
+        args.candidato_id,
+        args.candidato_nombre,
+        args.proceso_electoral_id,
+        args.dignidad,
+        args.organizacion_politica,
+    )

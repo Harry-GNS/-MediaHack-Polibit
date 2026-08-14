@@ -1,0 +1,235 @@
+"""Cliente conservador para los catálogos públicos del CNE.
+
+El CNE cambia la estructura de sus micrositios entre procesos. Por ello el
+catálogo declara explícitamente el índice oficial de cada dignidad y el
+scraper solo sigue enlaces dentro de dominios CNE. Nunca completa candidatos
+ni sustituye una URL que no esté publicada por el organismo electoral.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+import time
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Iterable
+from urllib.parse import urljoin, urlparse
+
+import requests
+from bs4 import BeautifulSoup
+
+from config import CNE_REQUEST_DELAY_SECONDS, CNE_REQUEST_TIMEOUT, RAW_DIR
+
+
+class CNEError(RuntimeError):
+    """La fuente CNE no respondió o no presentó la estructura esperada."""
+
+
+@dataclass(frozen=True)
+class FuenteProceso:
+    dignidad: str
+    indice_url: str
+    territorio: str | None = None
+
+
+@dataclass(frozen=True)
+class ProcesoElectoral:
+    id: str
+    nombre: str
+    anio: int
+    fuente_oficial: str
+    fuentes: tuple[FuenteProceso, ...]
+
+    def resumen(self) -> dict[str, object]:
+        return {
+            "id": self.id,
+            "nombre": self.nombre,
+            "anio": self.anio,
+            "fuente_oficial": self.fuente_oficial,
+            "dignidades_disponibles": [fuente.dignidad for fuente in self.fuentes],
+        }
+
+
+@dataclass(frozen=True)
+class CandidaturaCNE:
+    id: str
+    nombre: str
+    proceso_electoral_id: str
+    dignidad: str
+    plan_url: str
+    pagina_catalogo_url: str
+    organizacion_politica: str | None = None
+    territorio: str | None = None
+
+    def resumen(self) -> dict[str, object]:
+        return asdict(self)
+
+
+# El catálogo no pretende afirmar cobertura total del proceso: cada fuente
+# representa una categoría cuyo HTML y PDFs se pudieron constatar en cne.gob.ec.
+PROCESOS_ELECTORALES: dict[str, ProcesoElectoral] = {
+    "generales_2025": ProcesoElectoral(
+        id="generales_2025",
+        nombre="Elecciones Generales 2025",
+        anio=2025,
+        fuente_oficial="https://www.cne.gob.ec/cne-habilita-el-micrositio-conoce-a-tu-candidato/",
+        fuentes=(
+            FuenteProceso(
+                dignidad="Parlamentarios Andinos",
+                indice_url="https://www.cne.gob.ec/download-category/parlamentarios-andinos-planes-de-trabajo/",
+            ),
+        ),
+    ),
+}
+
+
+def listar_procesos() -> list[dict[str, object]]:
+    return [proceso.resumen() for proceso in PROCESOS_ELECTORALES.values()]
+
+
+def obtener_proceso(proceso_id: str) -> ProcesoElectoral:
+    try:
+        return PROCESOS_ELECTORALES[proceso_id]
+    except KeyError as exc:
+        raise CNEError(f"Proceso electoral no soportado: {proceso_id}") from exc
+
+
+def _es_dominio_cne(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return host == "cne.gob.ec" or host.endswith(".cne.gob.ec")
+
+
+def _slug(texto: str) -> str:
+    limpio = re.sub(r"[^a-z0-9]+", "-", texto.lower()).strip("-")
+    return limpio[:80] or "candidatura"
+
+
+class ScraperCNE:
+    """Descubre y descarga planes desde las páginas publicadas por CNE."""
+
+    def __init__(self, session: requests.Session | None = None, pausa: float = CNE_REQUEST_DELAY_SECONDS) -> None:
+        self.session = session or requests.Session()
+        # Requests ya define User-Agent; update (y no setdefault) garantiza
+        # que CNE entregue la versión HTML completa del catálogo público. El
+        # portal rechaza clientes con identificadores de librería o bots.
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept-Language": "es-EC,es;q=0.9",
+        })
+        self.pausa = pausa
+
+    def _obtener(self, url: str) -> requests.Response:
+        if not _es_dominio_cne(url):
+            raise CNEError(f"Se rechazó una fuente fuera del dominio oficial CNE: {url}")
+        try:
+            respuesta = self.session.get(url, timeout=CNE_REQUEST_TIMEOUT)
+            respuesta.raise_for_status()
+        except requests.RequestException as exc:
+            raise CNEError(f"No se pudo consultar CNE: {url}") from exc
+        if self.pausa:
+            time.sleep(self.pausa)
+        return respuesta
+
+    def _paginas_indice(self, url_inicial: str) -> Iterable[tuple[str, BeautifulSoup]]:
+        """Sigue sólo paginación explícita del catálogo, sin enumerar URLs."""
+        pendientes = [url_inicial]
+        visitadas: set[str] = set()
+        while pendientes:
+            url = pendientes.pop(0)
+            if url in visitadas:
+                continue
+            visitadas.add(url)
+            respuesta = self._obtener(url)
+            sopa = BeautifulSoup(respuesta.text, "html.parser")
+            yield url, sopa
+            for enlace in sopa.select("a[href]"):
+                texto = enlace.get_text(" ", strip=True).lower()
+                destino = urljoin(url, enlace["href"])
+                if ("siguiente" in texto or texto.startswith("page")) and _es_dominio_cne(destino):
+                    if destino not in visitadas:
+                        pendientes.append(destino)
+
+    def _pdf_desde_ficha(self, ficha_url: str) -> str | None:
+        ficha = self._obtener(ficha_url)
+        sopa = BeautifulSoup(ficha.text, "html.parser")
+        for enlace in sopa.select("a[href]"):
+            destino = urljoin(ficha_url, enlace["href"])
+            # El CNE usa dos formatos: enlace directo .pdf y WordPress Download
+            # Manager (wpdm-download-link), cuyo URL no termina en .pdf pero
+            # devuelve el archivo PDF oficial al solicitarlo.
+            es_pdf_directo = destino.lower().split("?", 1)[0].endswith(".pdf")
+            es_descarga_wpdm = "wpdm-download-link" in (enlace.get("class") or [])
+            if (es_pdf_directo or es_descarga_wpdm) and _es_dominio_cne(destino):
+                return destino
+        return None
+
+    def descubrir_candidaturas(self, proceso_id: str) -> list[CandidaturaCNE]:
+        proceso = obtener_proceso(proceso_id)
+        encontrados: list[CandidaturaCNE] = []
+        urls_plan: set[str] = set()
+        for fuente in proceso.fuentes:
+            for pagina_url, sopa in self._paginas_indice(fuente.indice_url):
+                for enlace in sopa.select("a[href]"):
+                    texto = enlace.get_text(" ", strip=True)
+                    if not texto.lower().startswith("plan de trabajo"):
+                        continue
+                    ficha_url = urljoin(pagina_url, enlace["href"])
+                    if not _es_dominio_cne(ficha_url):
+                        continue
+                    plan_url = self._pdf_desde_ficha(ficha_url)
+                    if not plan_url or plan_url in urls_plan:
+                        continue
+                    urls_plan.add(plan_url)
+                    nombre = re.sub(r"^plan de trabajo\s*", "", texto, flags=re.IGNORECASE).strip() or texto
+                    encontrados.append(
+                        CandidaturaCNE(
+                            id=f"{proceso.id}-{_slug(fuente.dignidad)}-{_slug(nombre)}",
+                            nombre=nombre,
+                            proceso_electoral_id=proceso.id,
+                            dignidad=fuente.dignidad,
+                            plan_url=plan_url,
+                            pagina_catalogo_url=ficha_url,
+                            territorio=fuente.territorio,
+                        )
+                    )
+        return encontrados
+
+    def descargar_planes(self, proceso_id: str, candidaturas: Iterable[CandidaturaCNE]) -> dict[str, object]:
+        proceso = obtener_proceso(proceso_id)
+        destino = RAW_DIR / proceso_id
+        destino.mkdir(parents=True, exist_ok=True)
+        ruta_manifiesto = destino / "manifest.json"
+        documentos_por_id: dict[str, dict[str, object]] = {}
+        if ruta_manifiesto.is_file():
+            try:
+                anterior = json.loads(ruta_manifiesto.read_text(encoding="utf-8"))
+                documentos_por_id = {documento["id"]: documento for documento in anterior.get("documentos", [])}
+            except (json.JSONDecodeError, KeyError, TypeError):
+                # Un manifiesto corrupto no borra PDFs ni permite inventar
+                # procedencia: se reconstruye sólo con nuevas descargas.
+                documentos_por_id = {}
+        for candidatura in candidaturas:
+            if candidatura.proceso_electoral_id != proceso_id:
+                raise CNEError("Una candidatura no pertenece al proceso seleccionado")
+            respuesta = self._obtener(candidatura.plan_url)
+            contenido = respuesta.content
+            if not contenido.startswith(b"%PDF"):
+                raise CNEError(f"La URL publicada no devolvió un PDF válido: {candidatura.plan_url}")
+            ruta = destino / f"{_slug(candidatura.id)}.pdf"
+            ruta.write_bytes(contenido)
+            documentos_por_id[candidatura.id] = {
+                **candidatura.resumen(),
+                "archivo_local": str(ruta.relative_to(RAW_DIR.parent.parent)),
+                "sha256": hashlib.sha256(contenido).hexdigest(),
+                "fecha_descarga_utc": datetime.now(UTC).isoformat(),
+                "content_type": respuesta.headers.get("Content-Type", ""),
+            }
+        manifiesto = {
+            "proceso": proceso.resumen(),
+            "documentos": list(documentos_por_id.values()),
+            "generado_en_utc": datetime.now(UTC).isoformat(),
+        }
+        ruta_manifiesto.write_text(json.dumps(manifiesto, ensure_ascii=False, indent=2), encoding="utf-8")
+        return manifiesto

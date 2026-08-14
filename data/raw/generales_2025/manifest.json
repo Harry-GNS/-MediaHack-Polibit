@@ -1,0 +1,84 @@
+{
+  "proceso": {
+    "id": "generales_2025",
+    "nombre": "Elecciones Generales 2025",
+    "anio": 2025,
+    "fuente_oficial": "https://www.cne.gob.ec/cne-habilita-el-micrositio-conoce-a-tu-candidato/",
+    "dignidades_disponibles": [
+      "Parlamentarios Andinos"
+    ]
+  },
+  "documentos": [
+    {
+      "id": "generales_2025-parlamentarios-andinos-creo",
+      "nombre": "CREO",
+      "proceso_electoral_id": "generales_2025",
+      "dignidad": "Parlamentarios Andinos",
+      "plan_url": "https://www.cne.gob.ec/download/plan-de-trabajo-creo-3/?wpdmdl=53525&refresh=6a7f6d5dc905a1786735965",
+      "pagina_catalogo_url": "https://www.cne.gob.ec/download/plan-de-trabajo-creo-3/",
+      "organizacion_politica": null,
+      "territorio": null,
+      "archivo_local": "data\\raw\\generales_2025\\generales-2025-parlamentarios-andinos-creo.pdf",
+      "sha256": "d99e60a531974b54f903386ad24994dc3f7b28bbf615072eb1dbd3f91db15667",
+      "fecha_descarga_utc": "2026-08-14T19:33:12.259747+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "generales_2025-parlamentarios-andinos-construye",
+      "nombre": "Construye",
+      "proceso_electoral_id": "generales_2025",
+      "dignidad": "Parlamentarios Andinos",
+      "plan_url": "https://www.cne.gob.ec/download/plan-de-trabajo-construye-2/?wpdmdl=53523&refresh=6a7f6d5f451511786735967",
+      "pagina_catalogo_url": "https://www.cne.gob.ec/download/plan-de-trabajo-construye-2/",
+      "organizacion_politica": null,
+      "territorio": null,
+      "archivo_local": "data\\raw\\generales_2025\\generales-2025-parlamentarios-andinos-construye.pdf",
+      "sha256": "a8b3ff70d29518749deb76709ffefa9967162aa1149786449a10b335b56f966b",
+      "fecha_descarga_utc": "2026-08-14T19:33:19.147568+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "generales_2025-parlamentarios-andinos-unidad-popular",
+      "nombre": "Unidad Popular",
+      "proceso_electoral_id": "generales_2025",
+      "dignidad": "Parlamentarios Andinos",
+      "plan_url": "https://www.cne.gob.ec/download/plan-de-trabajo-unidad-popular-3/?wpdmdl=53539&refresh=6a7f6da21b6601786736034",
+      "pagina_catalogo_url": "https://www.cne.gob.ec/download/plan-de-trabajo-unidad-popular-3/",
+      "organizacion_politica": null,
+      "territorio": null,
+      "archivo_local": "data\\raw\\generales_2025\\generales-2025-parlamentarios-andinos-unidad-popular.pdf",
+      "sha256": "1ee208400a2aa80eadb38543c0bb370a435b706fd984df960259bc0536043722",
+      "fecha_descarga_utc": "2026-08-14T19:34:30.287453+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "generales_2025-parlamentarios-andinos-suma",
+      "nombre": "SUMA",
+      "proceso_electoral_id": "generales_2025",
+      "dignidad": "Parlamentarios Andinos",
+      "plan_url": "https://www.cne.gob.ec/download/plan-de-trabajo-suma-2/?wpdmdl=53537&refresh=6a7f6da3a697c1786736035",
+      "pagina_catalogo_url": "https://www.cne.gob.ec/download/plan-de-trabajo-suma-2/",
+      "organizacion_politica": null,
+      "territorio": null,
+      "archivo_local": "data\\raw\\generales_2025\\generales-2025-parlamentarios-andinos-suma.pdf",
+      "sha256": "8649895fa8ea6cf9181816c20ac0cf92e6ccdfeaf8ff5f2e52fd5ee0a34f0dea",
+      "fecha_descarga_utc": "2026-08-14T19:34:31.569480+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "generales_2025-parlamentarios-andinos-reto",
+      "nombre": "RETO",
+      "proceso_electoral_id": "generales_2025",
+      "dignidad": "Parlamentarios Andinos",
+      "plan_url": "https://www.cne.gob.ec/download/plan-de-trabajo-reto/?wpdmdl=53534&refresh=6a7f6da53d1541786736037",
+      "pagina_catalogo_url": "https://www.cne.gob.ec/download/plan-de-trabajo-reto/",
+      "organizacion_politica": null,
+      "territorio": null,
+      "archivo_local": "data\\raw\\generales_2025\\generales-2025-parlamentarios-andinos-reto.pdf",
+      "sha256": "8177c37a3366ce58aacfd5000b2402201c217d50834b6e19684c46cf690eb01c",
+      "fecha_descarga_utc": "2026-08-14T19:34:34.093429+00:00",
+      "content_type": "application/pdf"
+    }
+  ],
+  "generado_en_utc": "2026-08-14T19:34:34.093429+00:00"
+}

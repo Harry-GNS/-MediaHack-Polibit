@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evidencia Municipal</title>
+  <style>
+    :root { --ink:#17223a; --muted:#60708a; --line:#dce4ef; --paper:#f6f8fc; --navy:#152b55; --sky:#e8f3ff; --gold:#f4b944; --green:#087a62; --danger:#a84a35; }
+    * { box-sizing:border-box; } body { margin:0; color:var(--ink); background:var(--paper); font:15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; }
+    header { background:var(--navy); color:white; padding:28px max(24px, calc((100vw - 1160px)/2)); }
+    header h1 { margin:0; font-size:26px; letter-spacing:-.03em; } header p { margin:5px 0 0; color:#c7d6ef; }
+    main { max-width:1160px; margin:auto; padding:26px 24px 48px; }
+    .badge { display:inline-flex; gap:7px; align-items:center; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.06em; background:#dff6ef; color:#075844; border-radius:999px; padding:6px 10px; }
+    .badge::before { content:""; width:7px; height:7px; background:#10a77d; border-radius:50%; }
+    .panel { background:white; border:1px solid var(--line); border-radius:16px; padding:22px; margin-top:18px; box-shadow:0 4px 15px #243b6510; }
+    h2 { margin:0 0 4px; font-size:19px; letter-spacing:-.02em; } .intro, .hint { color:var(--muted); margin:0; }
+    .controls { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; } label { color:#354560; font-weight:650; font-size:13px; display:grid; gap:6px; }
+    select,input,textarea { color:var(--ink); background:white; border:1px solid #bdcbe0; border-radius:9px; padding:10px 11px; font:inherit; width:100%; } textarea { min-height:82px; resize:vertical; }
+    .focus { display:flex; gap:10px; margin-top:14px; background:#fff7e4; border-left:4px solid var(--gold); padding:10px 12px; color:#69521f; border-radius:4px; }
+    .candidates { display:grid; grid-template-columns:repeat(auto-fit,minmax(235px,1fr)); gap:12px; margin-top:16px; }
+    .candidate { border:1px solid var(--line); border-radius:12px; padding:14px; cursor:pointer; display:block; transition:.15s; } .candidate:hover { border-color:#8db2e5; transform:translateY(-1px); }
+    .candidate.selected { border:2px solid #2476cf; background:var(--sky); padding:13px; } .candidate input { width:auto; accent-color:#2476cf; }
+    .candidate-top { display:flex; justify-content:space-between; gap:8px; align-items:start; } .candidate strong { display:block; font-size:16px; } .candidate small { color:var(--muted); }
+    .columns { display:grid; grid-template-columns:1.25fr .75fr; gap:18px; align-items:start; }
+    .promise-list { display:grid; gap:10px; margin-top:14px; } .promise { width:100%; text-align:left; border:1px solid var(--line); background:white; border-radius:11px; padding:14px; cursor:pointer; color:inherit; font:inherit; }
+    .promise:hover { border-color:#7da6de; background:#fbfdff; }.promise span { color:var(--muted); display:block; font-size:13px; margin-top:3px; }.promise b { color:var(--green); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    .question { background:#10294f; color:white; }.question h2 { color:white; }.question .hint { color:#c4d6f1; }.question textarea { margin-top:13px; }.question button { margin-top:10px; }
+    button { border:0; border-radius:9px; background:#2476cf; color:white; font:inherit; font-weight:700; padding:10px 14px; cursor:pointer; } button:hover { background:#145ba7; } button:disabled { opacity:.55; cursor:wait; }
+    .answer { display:none; margin-top:15px; padding-top:15px; border-top:1px solid #3e5b84; white-space:pre-wrap; }.answer.visible { display:block; }.answer h3 { margin:0 0 6px; font-size:14px; color:#a9d7ff; }.evidence { color:#bed0eb; font-size:13px; margin-top:10px; }
+    .empty { padding:26px 8px; color:var(--muted); text-align:center; }.modal { display:none; position:fixed; inset:0; padding:24px; background:#101c3190; z-index:2; overflow:auto; }.modal.open { display:grid; place-items:center; }.modal-card { max-width:720px; width:100%; background:white; border-radius:16px; padding:24px; position:relative; }.close { position:absolute; right:12px; top:12px; color:#40516c; background:transparent; font-size:22px; padding:3px 8px; }.meta { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:18px 0; }.meta div { background:#f3f6fa; border-radius:8px; padding:9px; }.meta label { font-size:11px; color:var(--muted); text-transform:uppercase; }.source { color:#40516c; font-size:13px; }
+    @media (max-width:720px) { .controls,.columns { grid-template-columns:1fr; } main { padding:18px 14px; } header { padding:22px 18px; } }
+  </style>
+</head>
+<body>
+  <header><h1>Evidencia Municipal</h1><p>Planes de trabajo, evidencia original y comparación para elecciones seccionales.</p></header>
+  <main>
+    <span class="badge">Foco: alcaldías y cantones</span>
+    <section class="panel">
+      <h2>Selecciona el contexto de comparación</h2>
+      <p class="intro">La interfaz está diseñada para comparar candidaturas a alcaldía dentro del mismo cantón. Los documentos cargados fuera de ese ámbito se identifican explícitamente.</p>
+      <div class="controls">
+        <label>Proceso electoral<select id="process"><option>Datos procesados localmente</option></select></label>
+        <label>Cantón<input id="canton" placeholder="Ej. Quito, Cuenca, Guayaquil" autocomplete="off"></label>
+      </div>
+      <div id="focus-note" class="focus">Carga planes de candidaturas a alcaldía del mismo cantón para una comparación municipal directa.</div>
+      <div id="candidates" class="candidates"><p class="empty">Cargando candidaturas procesadas…</p></div>
+    </section>
+    <section class="columns">
+      <div class="panel">
+        <h2>Propuestas extraídas</h2>
+        <p id="summary" class="hint">Selecciona una o más candidaturas para ver la evidencia.</p>
+        <div id="promises" class="promise-list"></div>
+      </div>
+      <aside class="panel question">
+        <h2>Pregunta a los planes</h2>
+        <p class="hint">La respuesta usa sólo las promesas procesadas y enlaza la evidencia disponible. No evalúa ni recomienda candidaturas.</p>
+        <textarea id="question" placeholder="Ej. ¿Qué propone cada candidatura sobre seguridad y espacio público?"></textarea>
+        <button id="ask">Preguntar con evidencia</button>
+        <div id="answer" class="answer"><h3>Respuesta basada en evidencia</h3><div id="answer-text"></div><div id="answer-evidence" class="evidence"></div></div>
+      </aside>
+    </section>
+  </main>
+  <div id="modal" class="modal" aria-hidden="true"><article class="modal-card"><button class="close" aria-label="Cerrar">×</button><h2 id="modal-title"></h2><p id="modal-text"></p><div id="modal-meta" class="meta"></div><p id="modal-source" class="source"></p></article></div>
+  <script>
+    const state = { candidates: [], selected: new Set(), promises: [] };
+    const $ = id => document.getElementById(id);
+    const escape = text => String(text ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    async function fetchJson(url, options) { const r = await fetch(url, options); const b = await r.json(); if (!r.ok) throw new Error(typeof b.detail === 'string' ? b.detail : 'No se pudo completar la consulta.'); return b; }
+    async function loadProcesses() { try { const processes = await fetchJson('/procesos-electorales'); $('process').insertAdjacentHTML('beforeend', processes.map(p => `<option>${escape(p.nombre)} · fuente CNE</option>`).join('')); } catch (_) {} }
+    function renderCandidates() {
+      const q = $('canton').value.trim().toLowerCase();
+      const visible = state.candidates.filter(c => !q || `${c.nombre} ${c.dignidad || ''}`.toLowerCase().includes(q));
+      $('candidates').innerHTML = visible.length ? visible.map(c => {
+        const selected = state.selected.has(c.id); const municipal = /alcald/i.test(c.dignidad || '');
+        return `<label class="candidate ${selected ? 'selected' : ''}"><div class="candidate-top"><span><strong>${escape(c.nombre)}</strong><small>${escape(c.dignidad || 'Dignidad sin especificar')}</small></span><input type="checkbox" data-id="${escape(c.id)}" ${selected ? 'checked' : ''}></div><small>${municipal ? 'Candidatura municipal' : 'Documento cargado fuera del foco municipal'}</small></label>`;
+      }).join('') : '<p class="empty">No hay candidaturas que coincidan con el cantón indicado.</p>';
+      document.querySelectorAll('.candidate input').forEach(input => input.addEventListener('change', async e => { e.target.checked ? state.selected.add(e.target.dataset.id) : state.selected.delete(e.target.dataset.id); renderCandidates(); await loadPromises(); }));
+      const municipal = [...state.selected].map(id => state.candidates.find(c => c.id === id)).filter(Boolean).every(c => /alcald/i.test(c.dignidad || ''));
+      $('focus-note').textContent = state.selected.size && !municipal ? 'Atención: la selección actual no corresponde a alcaldías. Se muestra como demostración técnica y no debe compararse como evidencia municipal directa.' : 'Carga planes de candidaturas a alcaldía del mismo cantón para una comparación municipal directa.';
+    }
+    async function loadPromises() {
+      const ids = [...state.selected]; state.promises = [];
+      if (!ids.length) { $('summary').textContent = 'Selecciona una o más candidaturas para ver la evidencia.'; $('promises').innerHTML = ''; return; }
+      const groups = await Promise.all(ids.map(id => fetchJson(`/candidatos/${encodeURIComponent(id)}/promesas`).catch(() => [])));
+      state.promises = groups.flat(); $('summary').textContent = `${state.promises.length} propuestas extraídas. Abre una para revisar el texto y su página fuente.`;
+      $('promises').innerHTML = state.promises.map((p,i) => `<button class="promise" data-index="${i}"><b>${escape(p.candidato)}</b><strong>${escape(p.accion)} ${escape(p.objeto)}</strong><span>Página ${escape(p.pagina_o_seccion)} · ${escape(p.categoria)}</span></button>`).join('');
+      document.querySelectorAll('.promise').forEach(button => button.addEventListener('click', () => showPromise(state.promises[button.dataset.index])));
+    }
+    function showPromise(p) { $('modal-title').textContent = `${p.accion} ${p.objeto}`; $('modal-text').textContent = p.texto_original; $('modal-meta').innerHTML = [['Candidato',p.candidato],['Categoría',p.categoria],['Cantidad',p.cantidad ?? 'No especificado'],['Plazo',p.plazo ?? 'No especificado'],['Presupuesto',p.presupuesto ?? 'No especificado'],['Indicador',p.indicador ?? 'No especificado']].map(([k,v]) => `<div><label>${escape(k)}</label>${escape(v)}</div>`).join(''); $('modal-source').textContent = `Fuente: ${p.fuente_documento} · página ${p.pagina_o_seccion}`; $('modal').classList.add('open'); }
+    async function ask() { const question = $('question').value.trim(); if (question.length < 8) return alert('Escribe una pregunta de al menos 8 caracteres.'); const button = $('ask'); button.disabled = true; button.textContent = 'Consultando evidencia…'; try { const r = await fetchJson('/preguntas', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pregunta:question,candidato_ids:[...state.selected]})}); $('answer-text').textContent = r.respuesta; $('answer-evidence').textContent = `Evidencia consultada: ${r.evidencias.map(e => `${e.candidato}, p. ${e.pagina_o_seccion}`).join(' · ')}`; $('answer').classList.add('visible'); } catch (error) { $('answer-text').textContent = error.message; $('answer-evidence').textContent = ''; $('answer').classList.add('visible'); } finally { button.disabled=false; button.textContent='Preguntar con evidencia'; } }
+    $('ask').addEventListener('click', ask); $('canton').addEventListener('input', renderCandidates); $('modal').addEventListener('click', e => { if (e.target === $('modal') || e.target.closest('.close')) $('modal').classList.remove('open'); });
+    (async () => { await loadProcesses(); state.candidates = await fetchJson('/candidatos'); renderCandidates(); })().catch(error => $('candidates').innerHTML = `<p class="empty">${escape(error.message)}</p>`);
+  </script>
+</body>
+</html>
