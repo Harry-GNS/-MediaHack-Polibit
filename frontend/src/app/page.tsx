@@ -16,7 +16,7 @@ type AppState = 'INTRO' | 'SEARCH' | 'CHAT';
 export default function Home() {
   const [currentState, setCurrentState] = useState<AppState>('INTRO');
   const [prompt, setPrompt] = useState('');
-  const [chatHistory, setChatHistory] = useState<{type: 'user' | 'loader' | 'ai', text?: string}[]>([]);
+  const [chatHistory, setChatHistory] = useState<{ type: 'user' | 'loader' | 'ai', text?: string }[]>([]);
   const [drawerData, setDrawerData] = useState<any>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -61,9 +61,9 @@ export default function Home() {
       tl.to('.search-extras', {
         opacity: 0, height: 0, margin: 0, duration: 0.3, overflow: "hidden"
       })
-      .to(searchContainerRef.current, {
-        top: "auto", bottom: "1.5rem", translateY: 0, duration: 0.8, ease: "power3.inOut"
-      }, "-=0.2");
+        .to(searchContainerRef.current, {
+          top: "auto", bottom: "1.5rem", translateY: 0, duration: 0.8, ease: "power3.inOut"
+        }, "-=0.2");
 
       gsap.to(chatRef.current, { opacity: 1, pointerEvents: "auto", duration: 0.5, delay: 0.5 });
       setCurrentState('CHAT');
@@ -71,7 +71,7 @@ export default function Home() {
 
     // Add user message
     setChatHistory(prev => [...prev, { type: 'user', text: currentPrompt }, { type: 'loader' }]);
-    
+
     // Simulate AI response
     setTimeout(() => {
       setChatHistory(prev => {
@@ -90,7 +90,7 @@ export default function Home() {
     // Animate new chat messages
     gsap.to('.chat-msg:not(.animated)', {
       opacity: 1, y: 0, duration: 0.5, stagger: 0.1,
-      onComplete: function() {
+      onComplete: function () {
         this.targets().forEach(el => el.classList.add('animated'));
       }
     });
@@ -113,7 +113,7 @@ export default function Home() {
       calcMsg: "La meta requerida representa <strong class='font-medium text-white'>1× el promedio histórico registrado</strong>, manteniéndose en línea con la ejecución anterior.",
       barWidth: "16%", mult: "1×", isAlert: false
     };
-    
+
     setDrawerData(data);
     setIsDrawerOpen(true);
   };
@@ -133,11 +133,21 @@ export default function Home() {
           <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
           Plataforma Neutral de Datos
         </div>
-        
-        <h1 className="intro-item transform translate-y-4 opacity-0 text-5xl md:text-7xl font-light tracking-tight mb-8 text-center max-w-4xl leading-tight">
-          Security that moves at the speed of <span className="font-semibold text-accent">emerging threats</span>
+
+        <h1 className="intro-item transform translate-y-4 opacity-0 text-6xl md:text-8xl tracking-tight mb-4 text-center">
+          <div className="flex items-baseline justify-center">
+            <span className="font-semibold text-gray-100">Vig</span>
+            <span className="font-black text-accent drop-shadow-[0_0_12px_rgba(0,210,255,0.6)]">IA</span>
+            <span className="ml-4 text-lg md:text-2xl font-mono text-gray-500 tracking-widest uppercase">
+              // Electoral
+            </span>
+          </div>
         </h1>
         
+        <p className="intro-item transform translate-y-4 opacity-0 text-lg md:text-xl text-gray-400 font-light mb-10 text-center max-w-2xl">
+          Monitoreo algorítmico y evidencia detrás de cada propuesta.
+        </p>
+
         <button onClick={handleStart} className="intro-item transform translate-y-4 opacity-0 px-8 py-3 bg-white text-dark rounded font-medium hover:bg-gray-200 transition-colors flex items-center gap-2">
           Iniciar Auditoría
           <Play className="w-4 h-4" />
@@ -145,32 +155,47 @@ export default function Home() {
       </div>
 
       {/* VIEW 2/3: GLOBAL SEARCH BAR */}
-      <div 
+      <div
         ref={searchContainerRef}
-        id="global-search" 
+        id="global-search"
         className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl px-6 z-30 ${currentState === 'INTRO' ? 'opacity-0 pointer-events-none' : ''}`}
       >
         <div className="search-extras text-center mb-8">
-          <h2 className="text-3xl font-light">¿Qué promesas quieres verificar hoy?</h2>
+          <h2 className="text-3xl font-light mb-6">¿Qué promesas quieres verificar hoy?</h2>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="relative glass rounded-lg flex items-center p-2 shadow-2xl transition-all">
           <div className="absolute -inset-1 bg-gradient-to-r from-accent to-blue-800 rounded-lg blur opacity-20 transition duration-700"></div>
           <div className="relative w-full flex items-center bg-dark/50 rounded z-10">
             <Search className="w-5 h-5 text-gray-400 ml-4" />
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ej: Compara las propuestas de educación..." 
+              placeholder="Ej: Compara las propuestas de educación..."
               className="w-full bg-transparent border-none text-white px-4 py-4 focus:outline-none font-light placeholder-gray-500"
             />
+            
+            <div className="relative mr-4 flex items-center">
+              <select className="appearance-none bg-surface border border-border rounded px-4 py-2 text-xs font-mono text-gray-300 cursor-pointer focus:outline-none hover:bg-surfaceHover transition-colors pr-8">
+                <option value="historico" className="bg-dark text-white">Histórico</option>
+                <option value="2025" className="bg-dark text-white">2025</option>
+                <option value="2023" className="bg-dark text-white">2023</option>
+                <option value="2021" className="bg-dark text-white">2021</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                </svg>
+              </div>
+            </div>
+
             <button type="submit" className="bg-white text-dark px-6 py-2 rounded font-medium hover:bg-gray-200 transition-colors text-sm mr-2 whitespace-nowrap">
               Enviar
             </button>
           </div>
         </form>
-        
+
         {/* Chips */}
         <div className="search-extras flex flex-wrap justify-center gap-3 mt-6">
           <span onClick={() => setPrompt('¿Qué proponen sobre la construcción de nuevas escuelas?')} className="px-3 py-1.5 text-xs font-mono border border-border bg-surface rounded text-gray-400 hover:text-accent hover:border-accent cursor-pointer transition-all">/educacion</span>
@@ -181,7 +206,7 @@ export default function Home() {
       {/* VIEW 3: RESULTS (CHAT HISTORY) */}
       <div ref={chatRef} className={`absolute inset-0 z-10 pt-8 pb-32 px-6 overflow-y-auto ${currentState !== 'CHAT' ? 'opacity-0 pointer-events-none' : ''}`}>
         <div className="max-w-4xl mx-auto flex flex-col gap-10">
-          
+
           {chatHistory.map((msg, i) => {
             if (msg.type === 'user') {
               return (
@@ -216,10 +241,10 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="grid md:grid-cols-2 gap-6 w-full">
-                    <EvidenceCard 
+                    <EvidenceCard
                       id="EVIDENCIA-01" candidateName="Candidato A" title="300 Unidades Educativas" action="Construir" deadline="4 años" budget="No especificado" accentColorClass="bg-accent" onAuditClick={() => openDrawer('A01')}
                     />
-                    <EvidenceCard 
+                    <EvidenceCard
                       id="EVIDENCIA-02" candidateName="Candidato B" title="50 Escuelas Equipadas" action="Construir y equipar" deadline="4 años" budget="$20,000,000" accentColorClass="bg-gray-500" onAuditClick={() => openDrawer('B01')}
                     />
                   </div>
@@ -228,7 +253,7 @@ export default function Home() {
             }
             return null;
           })}
-          
+
           <div ref={chatBottomRef} />
         </div>
       </div>
