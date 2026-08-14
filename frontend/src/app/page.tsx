@@ -134,8 +134,8 @@ export default function Home() {
           Plataforma Neutral de Datos
         </div>
         
-        <h1 className="intro-item transform translate-y-4 opacity-0 text-5xl md:text-7xl font-light tracking-tight mb-8">
-          Evidencia <span className="font-semibold">Electoral</span>
+        <h1 className="intro-item transform translate-y-4 opacity-0 text-5xl md:text-7xl font-light tracking-tight mb-8 text-center max-w-4xl leading-tight">
+          Security that moves at the speed of <span className="font-semibold text-accent">emerging threats</span>
         </h1>
         
         <button onClick={handleStart} className="intro-item transform translate-y-4 opacity-0 px-8 py-3 bg-white text-dark rounded font-medium hover:bg-gray-200 transition-colors flex items-center gap-2">
