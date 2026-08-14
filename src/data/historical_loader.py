@@ -42,14 +42,28 @@ class HistoricalDataLoader:
         return fuentes
 
     def buscar_contexto_historico(self, categoria: str, objeto: str) -> List[FuenteHistorica]:
-        """Busca el dataset histórico correspondiente según la categoría y objeto."""
+        """Busca el dataset histórico correspondiente según la categoría y objeto municipal."""
         cat_norm = categoria.strip().lower()
         obj_norm = objeto.strip().lower()
 
-        # Mapeo de categorías/objetos a archivos CSV
+        # 1. Educación
         if cat_norm == "educacion" or "educativa" in obj_norm or "escuela" in obj_norm:
             return self.cargar_csv("educacion_unidades_educativas.csv")
+            
+        # 2. Seguridad Municipal
         elif cat_norm == "seguridad" or "patrullero" in obj_norm or "camara" in obj_norm:
             return self.cargar_csv("seguridad_patrulleros.csv")
+            
+        # 3. Movilidad y Transporte (Competencia Municipal)
+        elif cat_norm == "movilidad" or "transporte" in obj_norm or "bus" in obj_norm or "vial" in obj_norm or "vias" in obj_norm:
+            return self.cargar_csv("movilidad_transporte.csv")
+            
+        # 4. Ambiente y Fauna Urbana (Bienestar animal, esterilizaciones)
+        elif cat_norm in ["ambiente", "animal", "genero"] or "esteriliz" in obj_norm or "fauna" in obj_norm or "perro" in obj_norm:
+            return self.cargar_csv("ambiente_fauna_urbana.csv")
+            
+        # 5. Salud e Innovación Municipal
+        elif cat_norm in ["salud", "innovacion"] or "medico" in obj_norm or "salud" in obj_norm:
+            return self.cargar_csv("salud_innovacion_municipal.csv")
         
         return []
