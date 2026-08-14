@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evidencia Electoral - Plataforma de Auditoría Abierta</title>
+    
+    <!-- CDNs -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#08080a',
+                        surface: 'rgba(255, 255, 255, 0.03)',
+                        surfaceHover: 'rgba(255, 255, 255, 0.06)',
+                        border: 'rgba(255, 255, 255, 0.08)',
+                        accent: '#00d2ff',
+                        accentMuted: 'rgba(0, 210, 255, 0.15)'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #08080a;
+            color: #ffffff;
+            overflow: hidden; /* Prevent scrolling on body, we'll scroll in the chat container */
+        }
+        
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tech-corners { position: relative; }
+        .tech-corners::before, .tech-corners::after,
+        .tech-corners > .corner-bottom::before, .tech-corners > .corner-bottom::after {
+            content: '+'; position: absolute; color: rgba(255,255,255,0.3);
+            font-family: monospace; font-size: 14px; line-height: 1; pointer-events: none;
+        }
+        .tech-corners::before { top: -7px; left: -4px; }
+        .tech-corners::after { top: -7px; right: -4px; }
+        .corner-bottom::before { bottom: -7px; left: -4px; }
+        .corner-bottom::after { bottom: -7px; right: -4px; }
+
+        #canvas-container {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px;}
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+
+        /* Loader */
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased bg-grid min-h-screen relative">
+
+    <!-- 1. BACKGROUND -->
+    <div id="canvas-container"></div>
+
+    <!-- VIEW 1: INTRO (SPLASH) -->
+    <div id="view-intro" class="absolute inset-0 flex flex-col items-center justify-center z-20">
+        <div class="inline-flex items-center gap-2 border border-border bg-surface px-3 py-1 rounded-full text-[10px] font-mono text-accent mb-6 tracking-widest uppercase opacity-0" id="intro-badge">
+            <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
+            Plataforma Neutral de Datos
+        </div>
+        
+        <h1 class="text-5xl md:text-7xl font-light tracking-tight mb-8 opacity-0" id="intro-title">
+            Evidencia <span class="font-semibold">Electoral</span>
+        </h1>
+        
+        <button id="btn-start" onclick="startApp()" class="opacity-0 transform translate-y-4 px-8 py-3 bg-white text-dark rounded font-medium hover:bg-gray-200 transition-colors flex items-center gap-2">
+            Iniciar Auditoría
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+        </button>
+    </div>
+
+    <!-- VIEW 2/3: GLOBAL SEARCH BAR -->
+    <div id="global-search" class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-3xl px-6 z-30 opacity-0 pointer-events-none">
+        
+        <div id="search-header" class="text-center mb-8">
+            <h2 class="text-3xl font-light">¿Qué promesas quieres verificar hoy?</h2>
+        </div>
+        
+        <div class="relative glass rounded-lg flex items-center p-2 shadow-2xl transition-all" id="search-box">
+            <div class="absolute -inset-1 bg-gradient-to-r from-accent to-blue-800 rounded-lg blur opacity-20 group-hover:opacity-40 transition duration-700"></div>
+            <div class="relative w-full flex items-center bg-dark/50 rounded z-10">
+                <svg class="w-5 h-5 text-gray-400 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input id="prompt-input" type="text" placeholder="Ej: Compara las propuestas de educación del Candidato A y B..." class="w-full bg-transparent border-none text-white px-4 py-4 focus:outline-none font-light placeholder-gray-500" onkeypress="handleEnter(event)">
+                <button onclick="submitPrompt()" class="bg-white text-dark px-6 py-2 rounded font-medium hover:bg-gray-200 transition-colors text-sm mr-2 whitespace-nowrap">
+                    Enviar
+                </button>
+            </div>
+        </div>
+        
+        <!-- Quick Suggestion Chips -->
+        <div id="search-chips" class="flex flex-wrap justify-center gap-3 mt-6">
+            <span onclick="fillPrompt('¿Qué proponen sobre la construcción de nuevas escuelas?')" class="px-3 py-1.5 text-xs font-mono border border-border bg-surface rounded text-gray-400 hover:text-accent hover:border-accent cursor-pointer transition-all">/educacion</span>
+            <span onclick="fillPrompt('Compara el presupuesto para seguridad de los candidatos')" class="px-3 py-1.5 text-xs font-mono border border-border bg-surface rounded text-gray-400 hover:text-accent hover:border-accent cursor-pointer transition-all">/seguridad_presupuesto</span>
+            <span onclick="fillPrompt('¿Cuáles son las metas para el sector salud?')" class="px-3 py-1.5 text-xs font-mono border border-border bg-surface rounded text-gray-400 hover:text-accent hover:border-accent cursor-pointer transition-all">/salud_historico</span>
+        </div>
+    </div>
+
+    <!-- VIEW 3: RESULTS (CHAT HISTORY) -->
+    <!-- This container takes full height but leaves space at bottom for the search bar -->
+    <div id="view-results" class="absolute inset-0 z-10 pt-8 pb-32 px-6 overflow-y-auto opacity-0 pointer-events-none hidden">
+        <div class="max-w-4xl mx-auto flex flex-col gap-10" id="chat-history">
+            <!-- Messages will be injected here -->
+        </div>
+    </div>
+
+    <!-- DRAWER LATERAL DE AUDITORÍA -->
+    <div id="drawer-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 opacity-0 pointer-events-none transition-opacity duration-300" onclick="closeDrawer()"></div>
+    <aside id="drawer" class="fixed top-0 right-0 w-full max-w-md h-full bg-[#0a0a0c] border-l border-border z-50 flex flex-col shadow-2xl transform translate-x-full">
+        <!-- Header -->
+        <div class="p-6 border-b border-border flex justify-between items-center bg-surface">
+            <div>
+                <h4 class="text-[10px] font-mono text-accent tracking-widest uppercase flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-accent animate-pulse"></span>
+                    Auditoría de Datos
+                </h4>
+                <div class="text-xs text-white font-mono mt-2">ID: <span class="text-gray-500">EV-2026-<span id="drawer-id">A01</span></span></div>
+            </div>
+            <button onclick="closeDrawer()" class="p-2 hover:bg-surface border border-transparent hover:border-border transition-colors">
+                <svg class="w-5 h-5 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <!-- Scrollable Content -->
+        <div class="p-6 flex-grow overflow-y-auto" id="drawer-content">
+            <!-- Content injected dynamically -->
+        </div>
+    </aside>
+
+    <!-- LOGIC & ANIMATIONS -->
+    <script>
+        // --- STATE ---
+        let currentState = 'INTRO'; // INTRO, SEARCH, CHAT
+        let isDrawerOpen = false;
+
+        // --- THREE.JS BACKGROUND ---
+        const initThreeJS = () => {
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x08080a, 0.25);
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.z = 4;
+
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            const particleCount = 400;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            
+            for(let i = 0; i < particleCount * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 10;
+            }
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const material = new THREE.PointsMaterial({
+                size: 0.02, color: 0x00d2ff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending
+            });
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+
+            let mouseX = 0, mouseY = 0, targetX = 0, targetY = 0;
+            const halfX = window.innerWidth / 2;
+            const halfY = window.innerHeight / 2;
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX - halfX) * 0.0005;
+                mouseY = (e.clientY - halfY) * 0.0005;
+            });
+
+            const clock = new THREE.Clock();
+            const animate = () => {
+                requestAnimationFrame(animate);
+                const time = clock.getElapsedTime();
+                targetX = mouseX; targetY = mouseY;
+                points.rotation.y += 0.001; 
+                points.rotation.x += 0.0005;
+                points.rotation.y += 0.05 * (targetX - points.rotation.y);
+                points.rotation.x += 0.05 * (targetY - points.rotation.x);
+                renderer.render(scene, camera);
+            };
+            animate();
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // --- APP FLOW ---
+        // Initial Intro Animation
+        const initIntro = () => {
+            gsap.to(["#intro-badge", "#intro-title", "#btn-start"], {
+                y: 0, opacity: 1, duration: 1, stagger: 0.2, ease: "power3.out", delay: 0.2
+            });
+        };
+
+        // 1. Transition Intro -> Search
+        window.startApp = () => {
+            currentState = 'SEARCH';
+            gsap.to("#view-intro", {
+                opacity: 0, y: -20, duration: 0.5, pointerEvents: "none",
+                onComplete: () => {
+                    document.getElementById('view-intro').style.display = 'none';
+                    // Show search bar in center
+                    gsap.to("#global-search", {
+                        opacity: 1, duration: 0.8, pointerEvents: "auto", ease: "power2.out"
+                    });
+                }
+            });
+        };
+
+        window.fillPrompt = (text) => {
+            document.getElementById('prompt-input').value = text;
+        };
+
+        window.handleEnter = (e) => {
+            if (e.key === 'Enter') submitPrompt();
+        };
+
+        // 2. Transition Search -> Chat Results
+        window.submitPrompt = () => {
+            const input = document.getElementById('prompt-input');
+            const promptText = input.value.trim();
+            if(!promptText) return;
+
+            input.value = ''; // clear
+
+            if (currentState === 'SEARCH') {
+                currentState = 'CHAT';
+                
+                // Move Search Bar to Bottom
+                const tl = gsap.timeline();
+                tl.to(["#search-header", "#search-chips"], {
+                    opacity: 0, height: 0, margin: 0, duration: 0.3, overflow: "hidden"
+                })
+                .to("#global-search", {
+                    top: "auto", bottom: "1.5rem", translateY: 0, duration: 0.8, ease: "power3.inOut"
+                }, "-=0.2");
+
+                // Show Results container
+                const resultsView = document.getElementById('view-results');
+                resultsView.classList.remove('hidden');
+                gsap.to(resultsView, { opacity: 1, pointerEvents: "auto", duration: 0.5, delay: 0.5 });
+            }
+
+            // Append User Question
+            appendUserMessage(promptText);
+            
+            // Append Loader
+            const loaderId = appendLoader();
+            
+            // Simulate AI Processing & Response
+            setTimeout(() => {
+                removeLoader(loaderId);
+                appendAIResponse();
+                scrollToBottom();
+            }, 2000);
+        };
+
+        const appendUserMessage = (text) => {
+            const chatHistory = document.getElementById('chat-history');
+            const html = `
+                <div class="flex justify-end opacity-0 transform translate-y-4 chat-msg">
+                    <div class="glass px-6 py-4 rounded-t-xl rounded-bl-xl max-w-2xl border-accent/20">
+                        <p class="text-white font-light">${text}</p>
+                    </div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            gsap.to(".chat-msg:last-child", { opacity: 1, y: 0, duration: 0.5 });
+            scrollToBottom();
+        };
+
+        const appendLoader = () => {
+            const id = 'loader-' + Date.now();
+            const chatHistory = document.getElementById('chat-history');
+            const html = `
+                <div id="${id}" class="flex justify-start opacity-0 chat-msg">
+                    <div class="flex gap-2 items-center text-accent py-4">
+                        <div class="w-2 h-2 bg-accent rounded-full typing-dot"></div>
+                        <div class="w-2 h-2 bg-accent rounded-full typing-dot"></div>
+                        <div class="w-2 h-2 bg-accent rounded-full typing-dot"></div>
+                        <span class="ml-2 text-xs font-mono tracking-widest text-gray-500 uppercase">Consultando evidencia...</span>
+                    </div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            gsap.to(".chat-msg:last-child", { opacity: 1, duration: 0.3 });
+            scrollToBottom();
+            return id;
+        };
+
+        const removeLoader = (id) => {
+            const loader = document.getElementById(id);
+            if(loader) loader.remove();
+        };
+
+        const appendAIResponse = () => {
+            const chatHistory = document.getElementById('chat-history');
+            
+            // Simulating a response regarding Education based on the user prompt
+            const html = `
+                <div class="flex flex-col gap-6 opacity-0 transform translate-y-4 chat-msg max-w-4xl w-full">
+                    
+                    <!-- AI Text Response -->
+                    <div class="pl-4 border-l-2 border-accent">
+                        <div class="flex items-center gap-2 mb-2 text-xs font-mono text-gray-500 uppercase tracking-wider">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            Síntesis de Evidencia
+                        </div>
+                        <p class="text-gray-300 font-light leading-relaxed text-lg">
+                            Se encontraron compromisos oficiales en los planes de gobierno. El <span class="text-white font-medium">Candidato A</span> propone construir 300 unidades educativas sin especificar presupuesto en su plan. El <span class="text-white font-medium">Candidato B</span> propone 50 escuelas con un presupuesto asignado de $20 millones. A continuación, el desglose de datos extraídos.
+                        </p>
+                    </div>
+
+                    <!-- Evidence Cards Grid -->
+                    <div class="grid md:grid-cols-2 gap-6 w-full">
+                        
+                        <!-- CARD A -->
+                        <div class="tech-corners glass p-6 relative group">
+                            <div class="corner-bottom"></div>
+                            <div class="absolute top-0 left-0 w-1 h-full bg-accent opacity-60"></div>
+                            
+                            <div class="flex justify-between items-start mb-6">
+                                <span class="font-mono text-[10px] text-gray-500 tracking-widest">[EVIDENCIA-01]</span>
+                                <span class="px-2 py-1 bg-surface text-[10px] font-mono border border-border text-white tracking-wider">CANDIDATO A</span>
+                            </div>
+                            
+                            <h3 class="text-2xl font-light mb-4">300 Unidades Educativas</h3>
+                            
+                            <div class="space-y-3 font-mono text-sm mb-6">
+                                <div class="flex justify-between border-b border-border pb-1">
+                                    <span class="text-gray-500">Acción</span>
+                                    <span class="text-white">Construir</span>
+                                </div>
+                                <div class="flex justify-between border-b border-border pb-1">
+                                    <span class="text-gray-500">Presupuesto</span>
+                                    <span class="text-yellow-500/80">No especificado</span>
+                                </div>
+                            </div>
+                            <button onclick="openDrawer('A01')" class="w-full py-2.5 border border-border text-xs font-medium hover:bg-white hover:text-dark transition-all flex justify-center items-center gap-2">
+                                Auditar Histórico
+                                <svg class="w-3 h-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                            </button>
+                        </div>
+
+                        <!-- CARD B -->
+                        <div class="tech-corners glass p-6 relative group">
+                            <div class="corner-bottom"></div>
+                            <div class="absolute top-0 left-0 w-1 h-full bg-gray-500 opacity-60"></div>
+                            
+                            <div class="flex justify-between items-start mb-6">
+                                <span class="font-mono text-[10px] text-gray-500 tracking-widest">[EVIDENCIA-02]</span>
+                                <span class="px-2 py-1 bg-surface text-[10px] font-mono border border-border text-white tracking-wider">CANDIDATO B</span>
+                            </div>
+                            
+                            <h3 class="text-2xl font-light mb-4">50 Escuelas Equipadas</h3>
+                            
+                            <div class="space-y-3 font-mono text-sm mb-6">
+                                <div class="flex justify-between border-b border-border pb-1">
+                                    <span class="text-gray-500">Acción</span>
+                                    <span class="text-white">Construir y equipar</span>
+                                </div>
+                                <div class="flex justify-between border-b border-border pb-1">
+                                    <span class="text-gray-500">Presupuesto</span>
+                                    <span class="text-white">$20,000,000</span>
+                                </div>
+                            </div>
+                            <button onclick="openDrawer('B01')" class="w-full py-2.5 border border-border text-xs font-medium hover:bg-white hover:text-dark transition-all flex justify-center items-center gap-2">
+                                Auditar Histórico
+                                <svg class="w-3 h-3 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            gsap.to(".chat-msg:last-child", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" });
+        };
+
+        const scrollToBottom = () => {
+            const resultsView = document.getElementById('view-results');
+            // Use smooth scroll
+            resultsView.scrollTo({
+                top: resultsView.scrollHeight,
+                behavior: 'smooth'
+            });
+        };
+
+        // --- DRAWER LOGIC ---
+        window.openDrawer = (id) => {
+            if(isDrawerOpen) return;
+            isDrawerOpen = true;
+            
+            document.getElementById('drawer-id').innerText = id;
+            
+            // Populate content dynamically based on ID
+            const drawerContent = document.getElementById('drawer-content');
+            let data = {};
+            if(id === 'A01') {
+                data = {
+                    text: "...nuestro compromiso es inquebrantable, por eso <span class='bg-accentMuted text-accent px-1'>construiremos 300 unidades educativas</span> durante nuestra administración...",
+                    page: "42", metaReq: "75", metaHist: "12.5",
+                    calcMsg: "La meta requerida representa <strong class='font-medium text-white'>6× el promedio histórico registrado</strong> en los últimos 4 años.",
+                    barWidth: "100%", mult: "6×"
+                };
+            } else {
+                data = {
+                    text: "...como prioridad invertiremos $20,000,000 para <span class='bg-gray-700 text-white px-1'>construir 50 escuelas equipadas</span> en los primeros 4 años...",
+                    page: "18", metaReq: "12.5", metaHist: "12.5",
+                    calcMsg: "La meta requerida representa <strong class='font-medium text-white'>1× el promedio histórico registrado</strong>, manteniéndose en línea con la ejecución anterior.",
+                    barWidth: "16%", mult: "1×"
+                };
+            }
+
+            drawerContent.innerHTML = `
+                <!-- A: Source Quote -->
+                <div class="mb-10">
+                    <h5 class="font-mono text-[10px] text-gray-500 uppercase tracking-widest mb-3">A. Fuente Primaria</h5>
+                    <div class="p-5 bg-grid border border-border relative">
+                        <p class="font-serif italic text-gray-300 leading-relaxed text-sm">${data.text}</p>
+                        <div class="mt-4 pt-3 border-t border-border/50 flex justify-between items-center text-[10px] font-mono">
+                            <span class="text-gray-400">Plan de Gobierno Oficial</span>
+                            <a href="#" class="text-accent hover:underline">Pág. ${data.page} ↗</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- B: Historical Data Badges -->
+                <div class="mb-10">
+                    <h5 class="font-mono text-[10px] text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        B. Contexto Oficial (SERCOP / INEC)
+                    </h5>
+                    <div class="grid grid-cols-2 gap-4 font-mono">
+                        <div class="p-4 bg-surface border border-border">
+                            <div class="text-gray-500 text-[10px] uppercase tracking-wider mb-2">Meta Requerida</div>
+                            <div class="text-3xl text-white font-light">${data.metaReq}<span class="text-xs text-gray-500 ml-1">/año</span></div>
+                        </div>
+                        <div class="p-4 bg-surface border border-border">
+                            <div class="text-gray-500 text-[10px] uppercase tracking-wider mb-2">Prom. Histórico</div>
+                            <div class="text-3xl text-white font-light">${data.metaHist}<span class="text-xs text-gray-500 ml-1">/año</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- C: Neutral Math Alert -->
+                <div class="p-6 border border-accent/30 bg-accent/5 tech-corners">
+                    <div class="corner-bottom"></div>
+                    <div class="font-mono text-[10px] tracking-widest text-accent mb-3 uppercase">C. Cálculo Objetivo</div>
+                    <p class="text-sm font-light mb-6 text-gray-300 leading-relaxed">${data.calcMsg}</p>
+                    
+                    <div class="relative h-1.5 w-full bg-surface border border-border rounded-full overflow-hidden flex">
+                        <div class="h-full bg-gray-500 w-[16%] z-10 border-r border-dark"></div>
+                        <div id="alert-bar" class="h-full bg-accent w-0 z-0 opacity-80" data-width="${data.barWidth}"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] font-mono text-gray-500 mt-3">
+                        <span>Base (1×)</span>
+                        <span class="${id === 'A01' ? 'text-accent' : 'text-gray-400'}">Requerido (${data.mult})</span>
+                    </div>
+                </div>
+            `;
+
+            const drawer = document.getElementById('drawer');
+            const overlay = document.getElementById('drawer-overlay');
+
+            overlay.classList.remove('pointer-events-none', 'opacity-0');
+            overlay.classList.add('opacity-100');
+            
+            gsap.to(drawer, { x: 0, duration: 0.6, ease: "expo.out" });
+            
+            // Animate bar
+            setTimeout(() => {
+                const alertBar = document.getElementById('alert-bar');
+                if(alertBar) gsap.to(alertBar, { width: alertBar.dataset.width, duration: 1.5, ease: "power3.out" });
+            }, 300);
+        };
+
+        window.closeDrawer = () => {
+            if(!isDrawerOpen) return;
+            isDrawerOpen = false;
+            
+            const drawer = document.getElementById('drawer');
+            const overlay = document.getElementById('drawer-overlay');
+
+            gsap.to(drawer, { x: "100%", duration: 0.5, ease: "power3.inOut" });
+            
+            overlay.classList.remove('opacity-100');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('pointer-events-none'), 300);
+        };
+
+        // Boot
+        document.addEventListener('DOMContentLoaded', () => {
+            initThreeJS();
+            initIntro();
+        });
+    </script>
+</body>
+</html>
