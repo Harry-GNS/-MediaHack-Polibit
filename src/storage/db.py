@@ -38,10 +38,14 @@ def guardar_promesa(promesa: Promesa) -> None:
 
 
 def listar_candidatos() -> list[dict[str, object]]:
-    """Devuelve candidatos ya procesados, no resultados del scraper externo."""
+    """Devuelve sólo candidatos con evidencia procesada disponible para UI."""
     inicializar_db()
     with _conexion() as conexion:
-        filas = conexion.execute("SELECT datos_json FROM candidatos ORDER BY nombre COLLATE NOCASE").fetchall()
+        filas = conexion.execute(
+            """SELECT c.datos_json FROM candidatos c
+               WHERE EXISTS (SELECT 1 FROM promesas p WHERE p.candidato_id = c.id)
+               ORDER BY c.nombre COLLATE NOCASE"""
+        ).fetchall()
     return [json.loads(fila[0]) for fila in filas]
 
 

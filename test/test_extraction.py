@@ -52,3 +52,42 @@ def test_cliente_openrouter_usa_base_url_y_modelo_explicito(monkeypatch):
     monkeypatch.setattr(modulo, "OPENROUTER_MODEL", "proveedor/modelo")
     cliente = modulo._cliente_por_defecto()
     assert str(cliente.base_url) == "https://openrouter.ai/api/v1/"
+
+
+def test_estructurador_envia_lote_y_conserva_una_evidencia_por_fragmento(monkeypatch):
+    monkeypatch.setattr(modulo, "OPENROUTER_BATCH_SIZE", 8)
+
+    class _CompletionsLote:
+        def create(self, **kwargs):
+            assert kwargs["max_tokens"] >= 500
+            assert "arreglo JSON" in kwargs["messages"][0]["content"]
+            respuesta = type("Respuesta", (), {})()
+            mensaje = type("Mensaje", (), {"content": """[
+                {"categoria":"seguridad","accion":"Mejorar","objeto":"iluminación","cantidad":"no_especificado","unidad":"no_especificado","presupuesto":"no_especificado","plazo":"no_especificado","indicador":"no_especificado"},
+                {"categoria":"movilidad","accion":"Construir","objeto":"ciclovías","cantidad":2,"unidad":"km","presupuesto":"no_especificado","plazo":"4 años","indicador":"no_especificado"}
+            ]"""})()
+            respuesta.choices = [type("Eleccion", (), {"message": mensaje})()]
+            return respuesta
+
+    cliente = type("Cliente", (), {"chat": type("Chat", (), {"completions": _CompletionsLote()})()})()
+    fragmentos = [
+        FragmentoPromesa("Mejorar la iluminación.", pagina=1, indice_en_pagina=1),
+        FragmentoPromesa("Construir 2 km de ciclovías en 4 años.", pagina=1, indice_en_pagina=2),
+    ]
+
+    promesas = estructurar_documento(fragmentos, "cand", "plan.pdf", cliente=cliente)
+
+    assert len(promesas) == 2
+    assert promesas[0].texto_original == fragmentos[0].texto
+    assert promesas[1].cantidad == 2
+    assert promesas[1].plazo == "4 años"
+
+
+def test_muestra_rapida_cubre_el_documento_y_respeta_el_limite():
+    fragmentos = [FragmentoPromesa(f"Propuesta {indice}", pagina=indice, indice_en_pagina=1) for indice in range(1, 11)]
+
+    muestra = modulo._muestra_distribuida(fragmentos, 4)
+
+    assert len(muestra) == 4
+    assert muestra[0].pagina == 1
+    assert muestra[-1].pagina == 10

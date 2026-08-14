@@ -31,9 +31,13 @@ CNE_REQUEST_DELAY_SECONDS = float(os.getenv("CNE_REQUEST_DELAY_SECONDS", "0.7"))
 
 # --- IA (OpenRouter, API compatible con OpenAI) ---
 # Nunca se escriben secretos en este archivo ni en el repositorio.
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "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")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat-v3.1")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# Reduce llamadas HTTP sin perder una evidencia por fragmento. Para depurar
+# un modelo puede fijarse OPENROUTER_BATCH_SIZE=1 en el archivo .env local.
+OPENROUTER_BATCH_SIZE = int(os.getenv("OPENROUTER_BATCH_SIZE", "20"))
+OPENROUTER_TIMEOUT_SECONDS = float(os.getenv("OPENROUTER_TIMEOUT_SECONDS", "90"))
 
 # --- Fuentes oficiales (completar con endpoints reales durante el hackathon) ---
 CNE_PLANES_URL = os.getenv("CNE_PLANES_URL", "")

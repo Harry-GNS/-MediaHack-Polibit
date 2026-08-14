@@ -1,0 +1,59 @@
+{
+  "proceso": {
+    "id": "seccionales_2023",
+    "nombre": "Elecciones Seccionales 2023 · Alcaldías",
+    "anio": 2023,
+    "fuente_oficial": "https://www.cne.gob.ec/elecciones-seccionales-2023/",
+    "dignidades_disponibles": [
+      "Alcaldía de Quito"
+    ],
+    "candidaturas_verificadas": 1
+  },
+  "documentos": [
+    {
+      "id": "seccionales-2023-alcaldia-antonio-ante-martha-posso",
+      "nombre": "Martha Posso Padilla",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Antonio Ante",
+      "plan_url": "https://delegaciones.cne.gob.ec/wp-content/uploads/2024/07/INGRESOS-LISTA-12-18-20-CHUGA.pdf",
+      "pagina_catalogo_url": "https://www.cne.gob.ec/elecciones-seccionales-2023/",
+      "organizacion_politica": null,
+      "territorio": "Antonio Ante",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-alcaldia-antonio-ante-martha-posso.pdf",
+      "sha256": "66ff5ced9ec6f350625a4cf60d566647be1917255a3c73bab599fa8c18cd3bbd",
+      "fecha_descarga_utc": "2026-08-14T22:30:51.349864+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-luisa-maldonado",
+      "nombre": "Luisa Maldonado",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Luisa-Maldonado.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-luisa-maldonado.pdf",
+      "sha256": "e08cd61b368d44817c63e942f672cc3d52868f40f2c59ffd973762e22acd26a9",
+      "fecha_descarga_utc": "2026-08-14T23:34:05.566125+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-pablo-ponce",
+      "nombre": "Pablo Ponce",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Pablo-Ponce.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-pablo-ponce.pdf",
+      "sha256": "389cf61ba388ff2db08169e7ca8cb8c03276e7bc4b316b7abff0105ffcbb1af0",
+      "fecha_descarga_utc": "2026-08-14T23:34:06.679281+00:00",
+      "content_type": "application/pdf"
+    }
+  ],
+  "generado_en_utc": "2026-08-14T23:34:06.679328+00:00"
+}

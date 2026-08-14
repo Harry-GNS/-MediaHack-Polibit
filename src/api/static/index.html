@@ -17,6 +17,7 @@
     .controls { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; } label { color:#354560; font-weight:650; font-size:13px; display:grid; gap:6px; }
     select,input,textarea { color:var(--ink); background:white; border:1px solid #bdcbe0; border-radius:9px; padding:10px 11px; font:inherit; width:100%; } textarea { min-height:82px; resize:vertical; }
     .focus { display:flex; gap:10px; margin-top:14px; background:#fff7e4; border-left:4px solid var(--gold); padding:10px 12px; color:#69521f; border-radius:4px; }
+    .import-tools { display:flex; align-items:center; gap:12px; margin-top:14px; } .import-tools small { color:var(--muted); }
     .candidates { display:grid; grid-template-columns:repeat(auto-fit,minmax(235px,1fr)); gap:12px; margin-top:16px; }
     .candidate { border:1px solid var(--line); border-radius:12px; padding:14px; cursor:pointer; display:block; transition:.15s; } .candidate:hover { border-color:#8db2e5; transform:translateY(-1px); }
     .candidate.selected { border:2px solid #2476cf; background:var(--sky); padding:13px; } .candidate input { width:auto; accent-color:#2476cf; }
@@ -32,17 +33,18 @@
   </style>
 </head>
 <body>
-  <header><h1>Evidencia Municipal</h1><p>Planes de trabajo, evidencia original y comparación para elecciones seccionales.</p></header>
+  <header><h1>Evidencia Municipal</h1><p>Planes de trabajo, evidencia original y comparación para Elecciones seccionales municipales.</p></header>
   <main>
     <span class="badge">Foco: alcaldías y cantones</span>
     <section class="panel">
       <h2>Selecciona el contexto de comparación</h2>
       <p class="intro">La interfaz está diseñada para comparar candidaturas a alcaldía dentro del mismo cantón. Los documentos cargados fuera de ese ámbito se identifican explícitamente.</p>
       <div class="controls">
-        <label>Proceso electoral<select id="process"><option>Datos procesados localmente</option></select></label>
-        <label>Cantón<input id="canton" placeholder="Ej. Quito, Cuenca, Guayaquil" autocomplete="off"></label>
+        <label>Proceso electoral<select id="process"><option value="">Cargando procesos oficiales…</option></select></label>
+        <label>Cantón<select id="canton" aria-label="Selecciona un cantón"><option value="">Selecciona un cantón</option></select></label>
       </div>
       <div id="focus-note" class="focus">Carga planes de candidaturas a alcaldía del mismo cantón para una comparación municipal directa.</div>
+      <div class="import-tools"><button id="process-plans" disabled>Procesar planes seleccionados</button><small id="process-status">Primero selecciona hasta dos candidaturas.</small></div>
       <div id="candidates" class="candidates"><p class="empty">Cargando candidaturas procesadas…</p></div>
     </section>
     <section class="columns">
@@ -65,15 +67,41 @@
     const state = { candidates: [], selected: new Set(), promises: [] };
     const $ = id => document.getElementById(id);
     const escape = text => String(text ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
-    async function fetchJson(url, options) { const r = await fetch(url, options); const b = await r.json(); if (!r.ok) throw new Error(typeof b.detail === 'string' ? b.detail : 'No se pudo completar la consulta.'); return b; }
-    async function loadProcesses() { try { const processes = await fetchJson('/procesos-electorales'); $('process').insertAdjacentHTML('beforeend', processes.map(p => `<option>${escape(p.nombre)} · fuente CNE</option>`).join('')); } catch (_) {} }
+    async function fetchJson(url, options) { const r = await fetch(url, options); const raw = await r.text(); let b; try { b = raw ? JSON.parse(raw) : {}; } catch (_) { throw new Error(`Error ${r.status}: ${raw || 'respuesta no válida del servidor'}`); } if (!r.ok) throw new Error(typeof b.detail === 'string' ? b.detail : `Error ${r.status}: no se pudo completar la consulta.`); return b; }
+    // Nombres de cantones para el selector municipal. Se derivan del catálogo
+    // público del CNE y se mantienen locales para no depender de red en la UI.
+    const CANTONES_CNE = `24 DE MAYO|AGUARICO|ALAUSÍ|ALFREDO BAQUERIZO MORENO|AMBATO|ANTONIO ANTE|ARAJUNO|ARCHIDONA|ARENILLAS|ATACAMES|ATAHUALPA|AZOGUES|BABA|BABAHOYO|BALAO|BALZAR|BALSAS|BAÑOS DE AGUA SANTA|BIBLIÁN|BOLÍVAR|BUENA FE|CAMILO PONCE ENRÍQUEZ|CAÑAR|CASCÁLES|CATAMAYO|CAYAMBE|CEVALLOS|CELICA|CENTINELA DEL CÓNDOR|CHAGUARPAMBA|CHAMBO|CHILLA|CHILLANES|CHIMBO|CHINCHIPE|CHONE|CHORDELEG|COLTA|COLIMES|CORONEL MARCELINO MARIDUEÑA|COTACACHI|CUENCA|CUMANDÁ|CUYABENO|DAULE|DELEG|DURÁN|ECHEANDÍA|EL CARMEN|EL CHACO|EL EMPALME|EL GUABO|EL PAN|EL PANGUI|EL TAMBO|ELOY ALFARO|ESMERALDAS|ESPEJO|ESPÍNDOLA|FLAVIO ALFARO|FRANCISCO DE ORELLANA|GENERAL ANTONIO ELIZALDE|GIRÓN|GONZALO PIZARRO|GONZANAMÁ|GUALACEO|GUALAQUIZA|GUACHAPALA|GUAMOTE|GUANO|GUARANDA|GUAYAQUIL|HUAMBOYA|HUAQUILLAS|IBARRA|ISABELA|ISIDRO AYORA|JAMA|JARAMIJÓ|JIPIJAPA|JUNÍN|LA CONCORDIA|LA JOYA DE LOS SACHAS|LA LIBERTAD|LA MANÁ|LA TRONCAL|LAGO AGRIO|LAS LAJAS|LAS NAVES|LATACUNGA|LIMÓN INDANZA|LOJA|LOMAS DE SARGENTILLO|LORETO|LOGROÑO|MACARÁ|MACHALA|MANTA|MARCABELÍ|MEJÍA|MERA|MILAGRO|MIRA|MOCHA|MOCACHE|MONTECRISTI|MONTALVO|MONTÚFAR|MORONA|MUISNE|NABÓN|NANGARITZA|NARANJAL|NARANJITO|NOBOL|OLMEDO|OÑA|OTAVALO|PABLO SEXTO|PAJÁN|PALANDA|PALENQUE|PALORA|PALTAS|PALESTINA|PANGUA|PAQUISHA|PASAJE|PATATE|PAUTE|PEDERNALES|PEDRO CARBO|PEDRO MONCAYO|PEDRO VICENTE MALDONADO|PELILEO|PENIPE|PICHINCHA|PIEDRAHITA|PÍLLARO|PIMAMPIRO|PINDAL|PIÑAS|PLAYAS|PORTOVELO|PORTOVIEJO|PUCARA|PUEBLO VIEJO|PUERTO LÓPEZ|PUERTO QUITO|PUJILÍ|PUTUMAYO|PUYANGO|QUEVEDO|QUERO|QUILANGA|QUININDÉ|QUINSALOMA|QUIJOS|QUITO|RÍO VERDE|RIOBAMBA|ROCAFUERTE|RUMIÑAHUI|SALCEDO|SALINAS|SALITRE|SAMBORONDÓN|SAN CRISTÓBAL|SAN FERNANDO|SAN JUAN BOSCO|SAN LORENZO|SAN MIGUEL|SAN MIGUEL DE LOS BANCOS|SAN PEDRO DE HUACA|SAN VICENTE|SANTA ANA|SANTA CLARA|SANTA CRUZ|SANTA ELENA|SANTA ISABEL|SANTA LUCÍA|SANTA ROSA|SANTIAGO|SANTO DOMINGO|SARAGURO|SAQUISILÍ|SEVILLA DE ORO|SHUSHUFINDI|SIGCHOS|SIGSIG|SIMÓN BOLÍVAR|SOZORANGA|SUCRE|SUCÚA|SUCUMBÍOS|SUSCAL|TAISHA|TENA|TIWINTZA|TISALEO|TOSAGUA|TULCÁN|URCUQUÍ|URDANETA|VALENCIA|VENTANAS|VINCES|YACUAMBI|YAGUACHI|YANZATZA|ZAMORA|ZAPOTILLO|ZARUMA`.split('|');
+    function loadMunicipalContext() { $('canton').insertAdjacentHTML('beforeend', [...new Set(CANTONES_CNE)].sort((a,b) => a.localeCompare(b,'es')).map(c => `<option value="${escape(c)}">${escape(c)}</option>`).join('')); }
+    async function loadProcesses() {
+      const processes = await fetchJson('/procesos-electorales');
+      const municipal = processes.filter(p => /seccional|alcald/i.test(`${p.nombre} ${(p.dignidades_disponibles || []).join(' ')}`));
+      $('process').innerHTML = municipal.map(p => `<option value="${escape(p.id)}">${escape(p.nombre)}</option>`).join('') || '<option value="">No hay procesos municipales disponibles</option>';
+    }
+    async function loadCandidates() {
+      const process = $('process').value;
+      const canton = $('canton').value;
+      const query = new URLSearchParams(); if (canton) query.set('canton', canton);
+      state.selected.clear();
+      if (!process || !canton) { state.candidates = []; renderCandidates(); return; }
+      const [catalogo, procesadas] = await Promise.all([
+        fetchJson(`/procesos-electorales/${encodeURIComponent(process)}/candidaturas?${query}`),
+        fetchJson(`/candidatos?proceso_electoral_id=${encodeURIComponent(process)}&${query}`),
+      ]);
+      const idsProcesados = new Set(procesadas.map(c => c.id));
+      state.candidates = catalogo.map(c => ({...c, procesado: idsProcesados.has(c.id)}));
+      renderCandidates();
+      await loadPromises();
+    }
     function renderCandidates() {
       const q = $('canton').value.trim().toLowerCase();
       const visible = state.candidates.filter(c => !q || `${c.nombre} ${c.dignidad || ''}`.toLowerCase().includes(q));
       $('candidates').innerHTML = visible.length ? visible.map(c => {
         const selected = state.selected.has(c.id); const municipal = /alcald/i.test(c.dignidad || '');
-        return `<label class="candidate ${selected ? 'selected' : ''}"><div class="candidate-top"><span><strong>${escape(c.nombre)}</strong><small>${escape(c.dignidad || 'Dignidad sin especificar')}</small></span><input type="checkbox" data-id="${escape(c.id)}" ${selected ? 'checked' : ''}></div><small>${municipal ? 'Candidatura municipal' : 'Documento cargado fuera del foco municipal'}</small></label>`;
+        const estado = c.procesado ? 'Evidencia lista para comparar' : 'Plan público disponible: requiere procesamiento';
+        return `<label class="candidate ${selected ? 'selected' : ''}"><div class="candidate-top"><span><strong>${escape(c.nombre)}</strong><small>${escape(c.dignidad || 'Dignidad sin especificar')}</small></span><input type="checkbox" data-id="${escape(c.id)}" ${selected ? 'checked' : ''}></div><small>${escape(c.nombre_fuente || 'Fuente no especificada')} · ${estado}</small></label>`;
       }).join('') : '<p class="empty">No hay candidaturas que coincidan con el cantón indicado.</p>';
+      $('process-plans').disabled = !state.selected.size || state.selected.size > 2;
+      $('process-status').textContent = state.selected.size > 2 ? 'Selecciona un máximo de dos candidaturas por procesamiento.' : state.selected.size ? 'Descarga y extrae una muestra de evidencia de los planes seleccionados.' : 'Primero selecciona hasta dos candidaturas.';
       document.querySelectorAll('.candidate input').forEach(input => input.addEventListener('change', async e => { e.target.checked ? state.selected.add(e.target.dataset.id) : state.selected.delete(e.target.dataset.id); renderCandidates(); await loadPromises(); }));
       const municipal = [...state.selected].map(id => state.candidates.find(c => c.id === id)).filter(Boolean).every(c => /alcald/i.test(c.dignidad || ''));
       $('focus-note').textContent = state.selected.size && !municipal ? 'Atención: la selección actual no corresponde a alcaldías. Se muestra como demostración técnica y no debe compararse como evidencia municipal directa.' : 'Carga planes de candidaturas a alcaldía del mismo cantón para una comparación municipal directa.';
@@ -81,15 +109,18 @@
     async function loadPromises() {
       const ids = [...state.selected]; state.promises = [];
       if (!ids.length) { $('summary').textContent = 'Selecciona una o más candidaturas para ver la evidencia.'; $('promises').innerHTML = ''; return; }
-      const groups = await Promise.all(ids.map(id => fetchJson(`/candidatos/${encodeURIComponent(id)}/promesas`).catch(() => [])));
-      state.promises = groups.flat(); $('summary').textContent = `${state.promises.length} propuestas extraídas. Abre una para revisar el texto y su página fuente.`;
+      const idsProcesados = ids.filter(id => state.candidates.find(c => c.id === id)?.procesado);
+      const groups = await Promise.all(idsProcesados.map(id => fetchJson(`/candidatos/${encodeURIComponent(id)}/promesas`).catch(() => [])));
+      state.promises = groups.flat(); $('summary').textContent = state.promises.length ? `${state.promises.length} propuestas extraídas. Abre una para revisar el texto y su página fuente.` : 'Estos planes aún no están procesados. Usa “Procesar planes seleccionados”.';
       $('promises').innerHTML = state.promises.map((p,i) => `<button class="promise" data-index="${i}"><b>${escape(p.candidato)}</b><strong>${escape(p.accion)} ${escape(p.objeto)}</strong><span>Página ${escape(p.pagina_o_seccion)} · ${escape(p.categoria)}</span></button>`).join('');
       document.querySelectorAll('.promise').forEach(button => button.addEventListener('click', () => showPromise(state.promises[button.dataset.index])));
     }
     function showPromise(p) { $('modal-title').textContent = `${p.accion} ${p.objeto}`; $('modal-text').textContent = p.texto_original; $('modal-meta').innerHTML = [['Candidato',p.candidato],['Categoría',p.categoria],['Cantidad',p.cantidad ?? 'No especificado'],['Plazo',p.plazo ?? 'No especificado'],['Presupuesto',p.presupuesto ?? 'No especificado'],['Indicador',p.indicador ?? 'No especificado']].map(([k,v]) => `<div><label>${escape(k)}</label>${escape(v)}</div>`).join(''); $('modal-source').textContent = `Fuente: ${p.fuente_documento} · página ${p.pagina_o_seccion}`; $('modal').classList.add('open'); }
     async function ask() { const question = $('question').value.trim(); if (question.length < 8) return alert('Escribe una pregunta de al menos 8 caracteres.'); const button = $('ask'); button.disabled = true; button.textContent = 'Consultando evidencia…'; try { const r = await fetchJson('/preguntas', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pregunta:question,candidato_ids:[...state.selected]})}); $('answer-text').textContent = r.respuesta; $('answer-evidence').textContent = `Evidencia consultada: ${r.evidencias.map(e => `${e.candidato}, p. ${e.pagina_o_seccion}`).join(' · ')}`; $('answer').classList.add('visible'); } catch (error) { $('answer-text').textContent = error.message; $('answer-evidence').textContent = ''; $('answer').classList.add('visible'); } finally { button.disabled=false; button.textContent='Preguntar con evidencia'; } }
-    $('ask').addEventListener('click', ask); $('canton').addEventListener('input', renderCandidates); $('modal').addEventListener('click', e => { if (e.target === $('modal') || e.target.closest('.close')) $('modal').classList.remove('open'); });
-    (async () => { await loadProcesses(); state.candidates = await fetchJson('/candidatos'); renderCandidates(); })().catch(error => $('candidates').innerHTML = `<p class="empty">${escape(error.message)}</p>`);
+    async function processPlans() { const ids = [...state.selected]; if (!ids.length || ids.length > 2) return; const button = $('process-plans'); button.disabled = true; button.textContent = 'Descargando y extrayendo…'; $('process-status').textContent = 'Puede tardar unos minutos: se procesan planes públicos con evidencia trazable.'; try { const r = await fetchJson(`/procesos-electorales/${encodeURIComponent($('process').value)}/procesar-planes`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidato_ids:ids,max_fragmentos:40})}); $('process-status').textContent = r.mensaje; await loadCandidates(); } catch (error) { $('process-status').textContent = error.message; } finally { button.disabled = !state.selected.size; button.textContent = 'Procesar planes seleccionados'; } }
+    $('ask').addEventListener('click', ask); $('process-plans').addEventListener('click', processPlans); $('canton').addEventListener('change', () => loadCandidates().catch(showLoadError)); $('process').addEventListener('change', () => loadCandidates().catch(showLoadError)); $('modal').addEventListener('click', e => { if (e.target === $('modal') || e.target.closest('.close')) $('modal').classList.remove('open'); });
+    function showLoadError(error) { $('candidates').innerHTML = `<p class="empty">${escape(error.message)}</p>`; }
+    (async () => { loadMunicipalContext(); await loadProcesses(); await loadCandidates(); })().catch(showLoadError);
   </script>
 </body>
 </html>

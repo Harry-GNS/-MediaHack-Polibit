@@ -32,6 +32,9 @@ class FuenteProceso:
     dignidad: str
     indice_url: str
     territorio: str | None = None
+    dominios_permitidos: tuple[str, ...] = ("cne.gob.ec",)
+    modo: str = "fichas_cne"
+    nombre_fuente: str = "CNE"
 
 
 @dataclass(frozen=True)
@@ -41,6 +44,7 @@ class ProcesoElectoral:
     anio: int
     fuente_oficial: str
     fuentes: tuple[FuenteProceso, ...]
+    candidaturas_directas: tuple["CandidaturaCNE", ...] = ()
 
     def resumen(self) -> dict[str, object]:
         return {
@@ -49,6 +53,7 @@ class ProcesoElectoral:
             "anio": self.anio,
             "fuente_oficial": self.fuente_oficial,
             "dignidades_disponibles": [fuente.dignidad for fuente in self.fuentes],
+            "candidaturas_verificadas": len(self.candidaturas_directas),
         }
 
 
@@ -62,6 +67,7 @@ class CandidaturaCNE:
     pagina_catalogo_url: str
     organizacion_politica: str | None = None
     territorio: str | None = None
+    nombre_fuente: str = "CNE"
 
     def resumen(self) -> dict[str, object]:
         return asdict(self)
@@ -79,6 +85,38 @@ PROCESOS_ELECTORALES: dict[str, ProcesoElectoral] = {
             FuenteProceso(
                 dignidad="Parlamentarios Andinos",
                 indice_url="https://www.cne.gob.ec/download-category/parlamentarios-andinos-planes-de-trabajo/",
+            ),
+        ),
+    ),
+    # El portal histórico "Conoce a tu candidato" de 2023 ya no responde de
+    # manera estable. Este registro conserva exclusivamente un documento que
+    # sigue publicado por una delegación del CNE; no inventa ni completa el
+    # catálogo del proceso. Cuando el CNE publique/rehabilite un índice, basta
+    # añadirlo en `fuentes` para que el mismo scraper lo recorra.
+    "seccionales_2023": ProcesoElectoral(
+        id="seccionales_2023",
+        nombre="Elecciones Seccionales 2023 · Alcaldías",
+        anio=2023,
+        fuente_oficial="https://www.cne.gob.ec/elecciones-seccionales-2023/",
+        fuentes=(
+            FuenteProceso(
+                dignidad="Alcaldía de Quito",
+                territorio="Quito",
+                indice_url="https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+                dominios_permitidos=("seccionales2023.ecuador-decide.org",),
+                modo="enlaces_pdf",
+                nombre_fuente="QuitoDecide / Ecuador Decide (archivo público)",
+            ),
+        ),
+        candidaturas_directas=(
+            CandidaturaCNE(
+                id="seccionales-2023-alcaldia-antonio-ante-martha-posso",
+                nombre="Martha Posso Padilla",
+                proceso_electoral_id="seccionales_2023",
+                dignidad="Alcaldía de Antonio Ante",
+                territorio="Antonio Ante",
+                plan_url="https://delegaciones.cne.gob.ec/wp-content/uploads/2024/07/INGRESOS-LISTA-12-18-20-CHUGA.pdf",
+                pagina_catalogo_url="https://www.cne.gob.ec/elecciones-seccionales-2023/",
             ),
         ),
     ),
@@ -122,7 +160,20 @@ class ScraperCNE:
 
     def _obtener(self, url: str) -> requests.Response:
         if not _es_dominio_cne(url):
-            raise CNEError(f"Se rechazó una fuente fuera del dominio oficial CNE: {url}")
+            raise CNEError(f"Se rechazó una fuente fuera de los dominios públicos permitidos: {url}")
+        return self._solicitar(url)
+
+    @staticmethod
+    def _es_dominio_permitido(url: str, dominios: tuple[str, ...]) -> bool:
+        host = (urlparse(url).hostname or "").lower()
+        return any(host == dominio or host.endswith(f".{dominio}") for dominio in dominios)
+
+    def _obtener_publica(self, url: str, dominios: tuple[str, ...]) -> requests.Response:
+        if not self._es_dominio_permitido(url, dominios):
+            raise CNEError(f"Se rechazó una fuente fuera de los dominios públicos permitidos: {url}")
+        return self._solicitar(url)
+
+    def _solicitar(self, url: str) -> requests.Response:
         try:
             respuesta = self.session.get(url, timeout=CNE_REQUEST_TIMEOUT)
             respuesta.raise_for_status()
@@ -131,6 +182,17 @@ class ScraperCNE:
         if self.pausa:
             time.sleep(self.pausa)
         return respuesta
+
+    @staticmethod
+    def _dominios_del_proceso(proceso: ProcesoElectoral) -> tuple[str, ...]:
+        dominios = {"cne.gob.ec"}
+        for fuente in proceso.fuentes:
+            dominios.update(fuente.dominios_permitidos)
+        for candidatura in proceso.candidaturas_directas:
+            host = urlparse(candidatura.plan_url).hostname
+            if host:
+                dominios.add(host.lower())
+        return tuple(dominios)
 
     def _paginas_indice(self, url_inicial: str) -> Iterable[tuple[str, BeautifulSoup]]:
         """Sigue sólo paginación explícita del catálogo, sin enumerar URLs."""
@@ -167,9 +229,33 @@ class ScraperCNE:
 
     def descubrir_candidaturas(self, proceso_id: str) -> list[CandidaturaCNE]:
         proceso = obtener_proceso(proceso_id)
-        encontrados: list[CandidaturaCNE] = []
-        urls_plan: set[str] = set()
+        encontrados: list[CandidaturaCNE] = list(proceso.candidaturas_directas)
+        urls_plan: set[str] = {candidatura.plan_url for candidatura in encontrados}
         for fuente in proceso.fuentes:
+            if fuente.modo == "enlaces_pdf":
+                respuesta = self._obtener_publica(fuente.indice_url, fuente.dominios_permitidos)
+                sopa = BeautifulSoup(respuesta.text, "html.parser")
+                for enlace in sopa.select("a[href]"):
+                    plan_url = urljoin(fuente.indice_url, enlace["href"])
+                    if not plan_url.lower().split("?", 1)[0].endswith(".pdf") or plan_url in urls_plan:
+                        continue
+                    if not self._es_dominio_permitido(plan_url, fuente.dominios_permitidos):
+                        continue
+                    urls_plan.add(plan_url)
+                    nombre = Path(urlparse(plan_url).path).stem.replace("-", " ").strip()
+                    encontrados.append(
+                        CandidaturaCNE(
+                            id=f"{proceso.id}-{_slug(fuente.territorio or fuente.dignidad)}-{_slug(nombre)}",
+                            nombre=nombre,
+                            proceso_electoral_id=proceso.id,
+                            dignidad=fuente.dignidad,
+                            plan_url=plan_url,
+                            pagina_catalogo_url=fuente.indice_url,
+                            territorio=fuente.territorio,
+                            nombre_fuente=fuente.nombre_fuente,
+                        )
+                    )
+                continue
             for pagina_url, sopa in self._paginas_indice(fuente.indice_url):
                 for enlace in sopa.select("a[href]"):
                     texto = enlace.get_text(" ", strip=True)
@@ -192,6 +278,7 @@ class ScraperCNE:
                             plan_url=plan_url,
                             pagina_catalogo_url=ficha_url,
                             territorio=fuente.territorio,
+                            nombre_fuente=fuente.nombre_fuente,
                         )
                     )
         return encontrados
@@ -213,7 +300,7 @@ class ScraperCNE:
         for candidatura in candidaturas:
             if candidatura.proceso_electoral_id != proceso_id:
                 raise CNEError("Una candidatura no pertenece al proceso seleccionado")
-            respuesta = self._obtener(candidatura.plan_url)
+            respuesta = self._obtener_publica(candidatura.plan_url, self._dominios_del_proceso(proceso))
             contenido = respuesta.content
             if not contenido.startswith(b"%PDF"):
                 raise CNEError(f"La URL publicada no devolvió un PDF válido: {candidatura.plan_url}")

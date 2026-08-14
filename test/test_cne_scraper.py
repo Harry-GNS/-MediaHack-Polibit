@@ -53,6 +53,17 @@ def test_rechaza_origen_fuera_del_cne():
     try:
         scraper._obtener("https://ejemplo.org/plan.pdf")
     except modulo.CNEError as error:
-        assert "fuera del dominio oficial" in str(error)
+        assert "fuera de los dominios públicos permitidos" in str(error)
     else:
         raise AssertionError("Debía rechazar una URL ajena al CNE")
+
+
+def test_expone_plan_municipal_verificado_sin_inventar_catalogo():
+    candidaturas = modulo.PROCESOS_ELECTORALES["seccionales_2023"].candidaturas_directas
+
+    assert len(candidaturas) == 1
+    candidatura = candidaturas[0]
+    assert candidatura.nombre == "Martha Posso Padilla"
+    assert candidatura.territorio == "Antonio Ante"
+    assert candidatura.dignidad == "Alcaldía de Antonio Ante"
+    assert candidatura.plan_url.startswith("https://delegaciones.cne.gob.ec/")
