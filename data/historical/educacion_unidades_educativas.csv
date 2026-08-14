@@ -1,0 +1,5 @@
+anio,categoria,objeto,unidad,valor,gasto_usd,nombre_fuente,url_o_id,fragmento_original
+2022,educacion,unidades educativas,unidades,12,22400000,SERCOP,https://datosabiertos.compraspublicas.gob.ec,Contratos ejecutados de infraestructura escolar a nivel nacional
+2023,educacion,unidades educativas,unidades,15,28100000,SERCOP / MinEduc,https://datosabiertos.compraspublicas.gob.ec,Nuevas unidades educativas del milenio y repotenciaciones entregadas
+2024,educacion,unidades educativas,unidades,9,14300000,SERCOP,https://datosabiertos.compraspublicas.gob.ec,Infraestructura educativa adjudicada
+2025,educacion,unidades educativas,unidades,14,21000000,SERCOP,https://datosabiertos.compraspublicas.gob.ec,Obras escolares registradas
