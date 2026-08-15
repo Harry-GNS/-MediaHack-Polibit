@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, ChevronDown, LoaderCircle, Search, ShieldCheck } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState, useRef } from "react";
+import { ArrowLeft, Check, ChevronDown, LoaderCircle, Search, ShieldCheck, Anchor } from "lucide-react";
 import Link from "next/link";
+import AnclaConfianza from "@/components/AnclaConfianza";
 
 type Proceso = { id: string; nombre: string; cantones?: string[] };
 type Candidato = {
@@ -78,6 +79,16 @@ export default function ComparacionPage() {
   const [pregunta, setPregunta] = useState("");
   const [respuesta, setRespuesta] = useState("");
   const [evidencias, setEvidencias] = useState<Promesa[]>([]);
+  const [promesaAncla, setPromesaAncla] = useState<Promesa | null>(null);
+  const anclaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (promesaAncla && anclaRef.current) {
+      setTimeout(() => {
+        anclaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [promesaAncla]);
 
   const proceso = useMemo(() => procesos.find(item => item.id === procesoId), [procesos, procesoId]);
   const candidatosSeleccionados = useMemo(() => candidatos.filter(c => seleccionados.includes(c.id)), [candidatos, seleccionados]);
@@ -155,6 +166,7 @@ export default function ComparacionPage() {
   const preguntar = async (event: FormEvent) => {
     event.preventDefault();
     if (!pregunta.trim()) return;
+    setPromesaAncla(null); // Limpiar ancla previa
     try {
       const resultado = await api<{ respuesta: string; evidencias: Promesa[] }>("/preguntas", {
         method: "POST", body: JSON.stringify({ pregunta, candidato_ids: seleccionados }),
@@ -237,9 +249,16 @@ export default function ComparacionPage() {
         </div>
         <aside className="rounded-2xl border border-accent/20 bg-[#061c29] p-5 md:p-7"><h2 className="text-xl">Pregunta a los planes</h2><p className="mt-2 text-sm leading-relaxed text-gray-300">Pregunta sólo por propuestas de los planes procesados. Las consultas fuera de ese ámbito se bloquean de forma segura.</p>
           <form onSubmit={preguntar} className="mt-5"><textarea value={pregunta} onChange={event => setPregunta(event.target.value)} maxLength={600} placeholder="Ej. ¿Qué proponen sobre seguridad y espacio público?" className="min-h-28 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm outline-none focus:border-accent" /><button className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-dark"><Search className="h-4 w-4" /> Preguntar con evidencia</button></form>
-          {respuesta && <div className="mt-6 border-t border-white/10 pt-5"><h3 className="text-sm font-medium text-accent">Fragmentos textuales recuperados</h3><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{respuesta}</p>{evidencias.length > 0 && <div className="mt-5 overflow-x-auto rounded-xl border border-white/10"><table className="w-full min-w-[560px] text-left text-xs"><thead className="bg-white/5 text-gray-400"><tr><th className="p-3">Candidatura</th><th className="p-3">Cita textual del plan</th><th className="p-3">Fuente</th></tr></thead><tbody className="divide-y divide-white/10">{evidencias.map((item, index) => <tr className="align-top" key={`${item.id}-${index}`}><td className="p-3">{item.nombre_candidato ?? item.candidato}</td><td className="whitespace-pre-wrap p-3 leading-relaxed text-gray-300">{citaTextual(item)}</td><td className="p-3"><EnlaceFuente item={item} /></td></tr>)}</tbody></table></div>}</div>}
+          {respuesta && <div className="mt-6 border-t border-white/10 pt-5"><h3 className="text-sm font-medium text-accent">Fragmentos textuales recuperados</h3><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{respuesta}</p>{evidencias.length > 0 && <div className="mt-5 overflow-x-auto rounded-xl border border-white/10"><table className="w-full min-w-[560px] text-left text-xs"><thead className="bg-white/5 text-gray-400"><tr><th className="p-3">Candidatura</th><th className="p-3">Cita textual del plan</th><th className="p-3">Fuente</th></tr></thead><tbody className="divide-y divide-white/10">{evidencias.map((item, index) => <tr className="align-top transition-colors hover:bg-white/[.02]" key={`${item.id}-${index}`}><td className="p-3">{item.nombre_candidato ?? item.candidato}</td><td className="whitespace-pre-wrap p-3 leading-relaxed text-gray-300">{citaTextual(item)}<div className="mt-3"><button onClick={() => setPromesaAncla(item)} className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest text-amber-400 transition-colors hover:bg-amber-500/20"><Anchor className="h-3 w-3" /> Ver contexto histórico</button></div></td><td className="p-3"><EnlaceFuente item={item} /></td></tr>)}</tbody></table></div>}</div>}
         </aside>
       </section>
+
+      <div ref={anclaRef}>
+        <AnclaConfianza
+          candidatoIds={seleccionados}
+          promesa={promesaAncla}
+        />
+      </div>
     </div>
   </main>;
 }

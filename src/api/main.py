@@ -241,3 +241,146 @@ def estado_procesamiento(trabajo_id: str) -> dict[str, object]:
         return {"trabajo_id": trabajo_id, **_TRABAJOS_PROCESAMIENTO[trabajo_id]}
     except KeyError as error:
         raise HTTPException(status_code=404, detail="No existe ese procesamiento o el servidor se reinició.") from error
+
+
+@app.get("/ancla")
+def ancla_de_confianza(
+    categoria: str | None = Query(default=None, description="Categoría temática, ej: seguridad, educacion"),
+    objeto: str | None = Query(default=None, description="Objeto de la promesa, ej: patrulleros, escuelas"),
+    candidato_ids: list[str] | None = Query(default=None, description="IDs a excluir (los candidatos comparados actualmente)"),
+) -> dict[str, object]:
+    """
+    Devuelve promesas históricas similares a las de los candidatos actuales.
+    No califica ni evalúa viabilidad — solo muestra antecedentes documentados.
+    """
+    todas = obtener_promesas()
+
+    # Excluir los candidatos actualmente seleccionados para mostrar solo histórico
+    excluir = set(candidato_ids or [])
+    historicas = [p for p in todas if str(p.get("candidato", "")) not in excluir]
+
+    # Filtrar por categoría u objeto si se especifican
+    if categoria:
+        cat_lower = categoria.casefold()
+        historicas = [
+            p for p in historicas
+            if cat_lower in str(p.get("categoria", "")).casefold()
+        ]
+    if objeto:
+        obj_lower = objeto.casefold()
+        historicas = [
+            p for p in historicas
+            if any(
+                obj_lower in str(p.get(campo, "")).casefold()
+                for campo in ("objeto", "accion", "texto_original")
+            )
+        ]
+
+    # Calcular promedio histórico de cantidad si existe
+    cantidades = [
+        float(p["cantidad"])
+        for p in historicas
+        if p.get("cantidad") is not None
+    ]
+    promedio = round(sum(cantidades) / len(cantidades), 1) if cantidades else None
+
+    # Armar respuesta — solo datos objetivos, sin calificación
+    candidatos_bd = {str(c["id"]): c for c in listar_candidatos()}
+    antecedentes = []
+    for promesa in historicas[:8]:  # máximo 8 antecedentes
+        cand = candidatos_bd.get(str(promesa.get("candidato", "")), {})
+        antecedentes.append({
+            "candidato": cand.get("nombre", promesa.get("candidato", "Desconocido")),
+            "proceso_electoral_id": cand.get("proceso_electoral_id"),
+            "categoria": promesa.get("categoria"),
+            "accion": promesa.get("accion"),
+            "objeto": promesa.get("objeto"),
+            "cantidad": promesa.get("cantidad"),
+            "unidad": promesa.get("unidad"),
+            "plazo": promesa.get("plazo"),
+            "texto": promesa.get("texto_original", "")[:200],
+            "fuente": promesa.get("fuente_documento"),
+        })
+
+    # INTEGRACIÓN CON EL MÓDULO DE HISTÓRICOS (CSV SCRAPING DEL AMIGO)
+    import unicodedata
+    def norm(s): return ''.join(c for c in unicodedata.normalize('NFD', s.strip().lower()) if unicodedata.category(c) != 'Mn') if s else ""
+    cat_str = norm(categoria)
+    obj_str = norm(objeto)
+
+    # 1. Datos de Ejecución del SERCOP (Módulo del amigo)
+    try:
+        from src.data.historical_loader import HistoricalDataLoader
+        loader = HistoricalDataLoader(Path(__file__).resolve().parent.parent.parent / "data" / "historical")
+        datos_amigo = loader.buscar_contexto_historico(categoria or "", objeto or "")
+        
+        for d in datos_amigo:
+            # Asignar el nombre del candidato histórico real según el año de Quito
+            candidato_historico = "Registro Público Oficial"
+            if d.anio:
+                if 2019 <= d.anio <= 2021:
+                    candidato_historico = "Jorge Yunda (Gestión)"
+                elif 2021 < d.anio <= 2023:
+                    candidato_historico = "Santiago Guarderas (Gestión)"
+                elif 2014 <= d.anio < 2019:
+                    candidato_historico = "Mauricio Rodas (Gestión)"
+                elif 2009 <= d.anio < 2014:
+                    candidato_historico = "Augusto Barrera (Gestión)"
+
+            # Para evitar repetición visual
+            texto_resumido = d.fragmento_original.split(';')[0] if ';' in d.fragmento_original else d.fragmento_original
+            antecedentes.append({
+                "candidato": candidato_historico,
+                "proceso_electoral_id": f"Año {d.anio} (Ejecución real)" if d.anio else "Histórico",
+                "categoria": "Registro Oficial",
+                "accion": "Ejecutado",
+                "objeto": "Contrato",
+                "cantidad": d.valor,
+                "unidad": d.unidad,
+                "plazo": f"Año {d.anio}",
+                "texto": f"Contratación/Ejecución registrada: {texto_resumido}",
+                "fuente": d.nombre_fuente,
+                "fuente_url": d.url_o_id if d.url_o_id.startswith("http") else None
+            })
+            
+    except Exception as e:
+        logger.error(f"Error cargando datos históricos del amigo: {e}")
+
+    # 3. Web Scraping EN VIVO de Hemeroteca Web (Para enlaces funcionales reales)
+    try:
+        from src.ingest.live_scraper import HemerotecaScraper
+        scraper = HemerotecaScraper()
+        # Usamos el objeto de la promesa (ej: "patrulleros") o la categoría para buscar en la web
+        termino_busqueda = objeto[:30] if objeto else categoria
+        if termino_busqueda:
+            noticias_vivo = scraper.buscar_noticias(termino_busqueda)
+            antecedentes.extend(noticias_vivo)
+    except Exception as e:
+        logger.error(f"Error en web scraping en vivo: {e}")
+
+    # FALLBACK DE EMERGENCIA: Si no hay NADA
+    if not antecedentes:
+        antecedentes.append({
+            "candidato": "Alcaldías Anteriores",
+            "proceso_electoral_id": "Hemeroteca Nacional",
+            "categoria": categoria or "General",
+            "accion": "Sin Datos",
+            "objeto": objeto[:40] if objeto else "Referencia general",
+            "cantidad": None,
+            "unidad": None,
+            "plazo": "Referencial",
+            "texto": "No se encontraron datos del SERCOP ni de medios en vivo específicos para esta propuesta. Posiblemente dependió de financiamiento externo o no se ejecutó.",
+            "fuente": "Base de datos (Sin matches exactos)",
+            "fuente_url": None
+        })
+
+    # Recalculamos el promedio con los datos que tienen cantidades
+    cantidades_finales = [float(a["cantidad"]) for a in antecedentes if a.get("cantidad") is not None]
+    promedio_final = round(sum(cantidades_finales) / len(cantidades_finales), 1) if cantidades_finales else promedio
+
+    return {
+        "total_antecedentes": len(antecedentes),
+        "promedio_historico_cantidad": promedio_final,
+        "antecedentes": antecedentes[:15], # Limitamos a 15 para no saturar la UI
+        "nota": "Contexto alimentado por IA (Planes de Trabajo) y cruce con base de datos hemerográfica / SERCOP extraída automáticamente.",
+    }

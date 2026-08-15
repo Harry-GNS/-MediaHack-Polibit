@@ -1,0 +1,5 @@
+anio,categoria,objeto,unidad,valor,gasto_usd,nombre_fuente,url_o_id,fragmento_original
+2022,salud,puntos atencion municipal,centros,8,950000,SERCOP - Salud Municipal,https://datosabiertos.compraspublicas.gob.ec,Adecuación de Unidades de Salud Municipal preventiva
+2023,salud,puntos atencion municipal,centros,12,1400000,SERCOP - Salud Municipal,https://datosabiertos.compraspublicas.gob.ec,Ampliación de centros de atención primaria y brigadas barriales
+2024,salud,puntos atencion municipal,centros,6,720000,SERCOP - Salud Municipal,https://datosabiertos.compraspublicas.gob.ec,Mantenimiento de policlínicos municipales
+2025,salud,puntos atencion municipal,centros,10,1150000,SERCOP - Salud Municipal,https://datosabiertos.compraspublicas.gob.ec,Puntos de atención médica ambulatoria

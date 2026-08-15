@@ -67,11 +67,16 @@ def correr_flujo(
     guardadas = 0
     for promesa in promesas:
         resultado = validar_promesa(promesa)
-        if not resultado.valida:
-            print(f"  ✗ Promesa descartada por validación: {resultado.errores}")
-            continue
-        if resultado.advertencias:
-            print(f"  ⚠ {promesa.accion} {promesa.objeto}: {resultado.advertencias}")
+        try:
+            if not resultado.valida:
+                texto = f"  - Promesa descartada por validación: {resultado.errores}"
+                print(texto.encode('cp1252', 'replace').decode('cp1252'))
+                continue
+            if resultado.advertencias:
+                texto = f"  [!] {promesa.accion} {promesa.objeto}: {resultado.advertencias}"
+                print(texto.encode('cp1252', 'replace').decode('cp1252'))
+        except Exception:
+            pass
 
         # NOTA: el cruce con datos históricos (src/matching/crosser.py) se
         # omite en este demo mínimo porque depende de tener datasets
