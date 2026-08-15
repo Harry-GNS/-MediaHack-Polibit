@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from src.extraction.ai_structurer import ConfiguracionIAError
 from src.extraction.text_normalizer import evidencia_estandarizada
 from src.comparison.service import comparar_promesas
-from src.ingest.cne_scraper import CNEError, ScraperCNE, listar_procesos
+from src.ingest.cne_scraper import CNEError, ScraperCNE, listar_cantones, listar_procesos
 from src.questions.answerer import responder_pregunta
 from src.storage.db import listar_candidatos, obtener_promesas
 
@@ -128,6 +128,12 @@ def comparar_planes(solicitud: ComparacionRequest) -> dict[str, object]:
 def procesos_electorales() -> list[dict[str, object]]:
     """Opciones que el frontend muestra en el menú inicial."""
     return listar_procesos()
+
+
+@app.get("/cantones")
+def cantones_electorales() -> list[str]:
+    """Catálogo geográfico completo para el selector municipal."""
+    return listar_cantones()
 
 
 @app.get("/procesos-electorales/{proceso_id}/candidaturas")

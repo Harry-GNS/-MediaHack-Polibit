@@ -11,6 +11,7 @@ import hashlib
 import json
 import re
 import time
+import unicodedata
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -25,6 +26,43 @@ from config import CNE_REQUEST_DELAY_SECONDS, CNE_REQUEST_TIMEOUT, RAW_DIR
 
 class CNEError(RuntimeError):
     """La fuente CNE no respondió o no presentó la estructura esperada."""
+
+
+_INEC_CANTONES_URL = "https://idgn.ecuadorencifras.gob.ec/server/rest/services/Hosted/DPA_2020/FeatureServer/1/query"
+_CANTONES_CACHE: list[str] | None = None
+_CANTONES_RESPALDO = ("Quito", "Antonio Ante")
+
+
+def listar_cantones() -> list[str]:
+    """Obtiene el catálogo de cantones del servicio geográfico público INEC.
+
+    El listado sirve sólo al selector geográfico; no afirma que existan planes
+    descargables para cada cantón. Ante una caída del servicio se conserva un
+    respaldo con los territorios que el catálogo de planes sí conoce.
+    """
+    global _CANTONES_CACHE
+    if _CANTONES_CACHE is not None:
+        return _CANTONES_CACHE
+    try:
+        respuesta = requests.get(
+            _INEC_CANTONES_URL,
+            params={"where": "1=1", "outFields": "nom_can", "returnGeometry": "false", "f": "json"},
+            timeout=CNE_REQUEST_TIMEOUT,
+        )
+        respuesta.raise_for_status()
+        nombres = {
+            str(feature.get("attributes", {}).get("nom_can", "")).strip().title()
+            for feature in respuesta.json().get("features", [])
+        }
+        # El INEC identifica Quito por su denominación administrativa; en la
+        # navegación municipal se muestra el nombre de uso habitual.
+        if "Distrito Metropolitano De Quito" in nombres:
+            nombres.remove("Distrito Metropolitano De Quito")
+            nombres.add("Quito")
+        _CANTONES_CACHE = sorted(nombre for nombre in nombres if nombre)
+    except (requests.RequestException, ValueError, KeyError):
+        _CANTONES_CACHE = list(_CANTONES_RESPALDO)
+    return _CANTONES_CACHE
 
 
 @dataclass(frozen=True)

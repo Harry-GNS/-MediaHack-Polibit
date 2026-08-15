@@ -51,8 +51,8 @@ function TablaComparacion({ grupos, candidatos }: { grupos: Grupo[]; candidatos:
                 const items = grupo.propuestas_por_candidato.find(item => item.candidato === candidato.id)?.propuestas ?? [];
                 return <td className="p-4 leading-relaxed text-gray-300" key={candidato.id}>
                   {items.length ? items.map((item, itemIndex) => <div className="mb-3 last:mb-0" key={`${item.id}-${itemIndex}`}>
-                    <p>{proposal(item)}</p>
-                    <p className="mt-1 text-[10px] font-mono text-gray-500">Pág. {item.pagina_o_seccion ?? "s/d"}</p>
+                    <blockquote className="whitespace-pre-wrap border-l border-white/20 pl-3">{citaTextual(item)}</blockquote>
+                    <p className="mt-2"><EnlaceFuente item={item} /></p>
                   </div>) : <span className="text-gray-600">Sin propuesta relacionada</span>}
                 </td>;
               })}
@@ -66,6 +66,7 @@ function TablaComparacion({ grupos, candidatos }: { grupos: Grupo[]; candidatos:
 
 export default function ComparacionPage() {
   const [procesos, setProcesos] = useState<Proceso[]>([]);
+  const [cantonesDisponibles, setCantonesDisponibles] = useState<string[]>([]);
   const [procesoId, setProcesoId] = useState("");
   const [canton, setCanton] = useState("");
   const [candidatos, setCandidatos] = useState<Candidato[]>([]);
@@ -80,7 +81,7 @@ export default function ComparacionPage() {
 
   const proceso = useMemo(() => procesos.find(item => item.id === procesoId), [procesos, procesoId]);
   const candidatosSeleccionados = useMemo(() => candidatos.filter(c => seleccionados.includes(c.id)), [candidatos, seleccionados]);
-  const cantones = proceso?.cantones ?? (canton ? [canton] : []);
+  const cantones = cantonesDisponibles.length ? cantonesDisponibles : (proceso?.cantones ?? (canton ? [canton] : []));
 
   useEffect(() => {
     api<Proceso[]>("/procesos-electorales")
@@ -90,6 +91,12 @@ export default function ComparacionPage() {
         if (municipal) { setProcesoId(municipal.id); setCanton(municipal.cantones?.[0] ?? ""); }
       })
       .catch(error => setEstado(`No se pudo conectar al backend: ${error.message}`));
+  }, []);
+
+  useEffect(() => {
+    api<string[]>("/cantones")
+      .then(setCantonesDisponibles)
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -230,7 +237,7 @@ export default function ComparacionPage() {
         </div>
         <aside className="rounded-2xl border border-accent/20 bg-[#061c29] p-5 md:p-7"><h2 className="text-xl">Pregunta a los planes</h2><p className="mt-2 text-sm leading-relaxed text-gray-300">Pregunta sólo por propuestas de los planes procesados. Las consultas fuera de ese ámbito se bloquean de forma segura.</p>
           <form onSubmit={preguntar} className="mt-5"><textarea value={pregunta} onChange={event => setPregunta(event.target.value)} maxLength={600} placeholder="Ej. ¿Qué proponen sobre seguridad y espacio público?" className="min-h-28 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm outline-none focus:border-accent" /><button className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-dark"><Search className="h-4 w-4" /> Preguntar con evidencia</button></form>
-          {respuesta && <div className="mt-6 border-t border-white/10 pt-5"><h3 className="text-sm font-medium text-accent">Respuesta basada en evidencia</h3><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{respuesta}</p>{evidencias.length > 0 && <div className="mt-5 overflow-x-auto rounded-xl border border-white/10"><table className="w-full min-w-[480px] text-left text-xs"><thead className="bg-white/5 text-gray-400"><tr><th className="p-3">Candidatura</th><th className="p-3">Propuesta</th><th className="p-3">Pág.</th></tr></thead><tbody className="divide-y divide-white/10">{evidencias.map((item, index) => <tr key={`${item.id}-${index}`}><td className="p-3">{item.candidato}</td><td className="p-3 text-gray-300">{proposal(item)}</td><td className="p-3 text-gray-400">{item.pagina_o_seccion ?? "s/d"}</td></tr>)}</tbody></table></div>}</div>}
+          {respuesta && <div className="mt-6 border-t border-white/10 pt-5"><h3 className="text-sm font-medium text-accent">Fragmentos textuales recuperados</h3><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{respuesta}</p>{evidencias.length > 0 && <div className="mt-5 overflow-x-auto rounded-xl border border-white/10"><table className="w-full min-w-[560px] text-left text-xs"><thead className="bg-white/5 text-gray-400"><tr><th className="p-3">Candidatura</th><th className="p-3">Cita textual del plan</th><th className="p-3">Fuente</th></tr></thead><tbody className="divide-y divide-white/10">{evidencias.map((item, index) => <tr className="align-top" key={`${item.id}-${index}`}><td className="p-3">{item.nombre_candidato ?? item.candidato}</td><td className="whitespace-pre-wrap p-3 leading-relaxed text-gray-300">{citaTextual(item)}</td><td className="p-3"><EnlaceFuente item={item} /></td></tr>)}</tbody></table></div>}</div>}
         </aside>
       </section>
     </div>
