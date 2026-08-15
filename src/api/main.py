@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import List
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -12,14 +14,30 @@ from src.extraction.ai_structurer import ConfiguracionIAError
 from src.ingest.cne_scraper import CNEError, ScraperCNE, listar_procesos
 from src.questions.answerer import responder_pregunta
 from src.storage.db import listar_candidatos, obtener_promesas
+from src.validation.validator import validar_texto
+from app import scrapear_url
 
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 app = FastAPI(title="Evidencia Municipal", version="0.2.0")
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
+# Habilitar CORS para el frontend Next.js
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 class DescargaPlanesRequest(BaseModel):
     candidato_ids: list[str] = Field(min_length=1, max_length=5)
+
+
+class ValidarRequest(BaseModel):
+    texto: str = Field(min_length=1, max_length=8000, description="Texto a validar")
+    fuentes: List[str] = Field(min_length=1, max_length=10, description="Lista de URLs de fuentes confiables")
 
 
 class PreguntaRequest(BaseModel):
@@ -61,6 +79,27 @@ def preguntas_de_planes(solicitud: PreguntaRequest) -> dict[str, object]:
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return {"respuesta": respuesta, "evidencias": evidencias}
+
+
+@app.post("/validar")
+def validar_datos(solicitud: ValidarRequest) -> list[dict]:
+    """
+    Extrae datos estadísticos del texto y los valida contra las fuentes proporcionadas.
+    Principio: 'Sin veredictos, solo evidencia'.
+    """
+    # 1. Scrapear todas las fuentes
+    fuentes_scrapeadas = [scrapear_url(url) for url in solicitud.fuentes]
+
+    # 2. Validar el texto contra las fuentes
+    resultados = validar_texto(solicitud.texto, fuentes_scrapeadas)
+
+    if not resultados:
+        raise HTTPException(
+            status_code=422,
+            detail="No se detectaron datos estadísticos o numéricos en el texto proporcionado."
+        )
+
+    return [r.model_dump() for r in resultados]
 
 
 @app.get("/procesos-electorales")

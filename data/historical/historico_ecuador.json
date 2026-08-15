@@ -1,0 +1,62 @@
+[
+  {
+    "sector": "Seguridad",
+    "subtema": "Policía Nacional",
+    "indicador": "Nuevos Policías Incorporados",
+    "unidad": "efectivos",
+    "promedio_anual": 3500,
+    "monto_historico_usd": 150000000,
+    "periodo": "2018-2023",
+    "fuente": "Ministerio del Interior - Archivo General"
+  },
+  {
+    "sector": "Educación",
+    "subtema": "Infraestructura Educativa",
+    "indicador": "Construcción de Unidades Educativas",
+    "unidad": "escuelas",
+    "promedio_anual": 12,
+    "monto_historico_usd": 48000000,
+    "periodo": "2015-2022",
+    "fuente": "Ministerio de Educación / SERCOP"
+  },
+  {
+    "sector": "Empleo",
+    "subtema": "Creación de Empleo Adecuado",
+    "indicador": "Nuevos Empleos Formales",
+    "unidad": "puestos",
+    "promedio_anual": 50000,
+    "monto_historico_usd": null,
+    "periodo": "2019-2023",
+    "fuente": "INEC - ENEMDU"
+  },
+  {
+    "sector": "Salud",
+    "subtema": "Infraestructura de Salud",
+    "indicador": "Construcción de Hospitales Básicos/Generales",
+    "unidad": "hospitales",
+    "promedio_anual": 2,
+    "monto_historico_usd": 120000000,
+    "periodo": "2015-2023",
+    "fuente": "Ministerio de Salud Pública"
+  },
+  {
+    "sector": "Movilidad",
+    "subtema": "Vialidad",
+    "indicador": "Rehabilitación Vial Red Estatal",
+    "unidad": "kilometros",
+    "promedio_anual": 450.5,
+    "monto_historico_usd": 250000000,
+    "periodo": "2017-2022",
+    "fuente": "MTOP"
+  },
+  {
+    "sector": "Ambiente",
+    "subtema": "Conservación",
+    "indicador": "Áreas Protegidas Incorporadas",
+    "unidad": "hectareas",
+    "promedio_anual": 150000,
+    "monto_historico_usd": 5000000,
+    "periodo": "2010-2023",
+    "fuente": "Ministerio del Ambiente (MAATE)"
+  }
+]
