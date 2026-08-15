@@ -7,7 +7,11 @@
     "dignidades_disponibles": [
       "Alcaldía de Quito"
     ],
-    "candidaturas_verificadas": 1
+    "candidaturas_verificadas": 1,
+    "cantones": [
+      "Quito",
+      "Antonio Ante"
+    ]
   },
   "documentos": [
     {
@@ -81,7 +85,7 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-natasha-rojas.pdf",
       "sha256": "b167c7b7b26585be859cd4e7b3eaa0e2b8d2ee53508ca2da9477d795779e311d",
-      "fecha_descarga_utc": "2026-08-15T03:15:10.392112+00:00",
+      "fecha_descarga_utc": "2026-08-15T15:18:21.421308+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -113,7 +117,22 @@
       "sha256": "12f21c7f5cbacfd40fb22f74303249776313d9e0a71ab8f838cd865f82311801",
       "fecha_descarga_utc": "2026-08-15T03:24:42.879753+00:00",
       "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-andres-paez",
+      "nombre": "Andres Paez",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Andres-Paez.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-andres-paez.pdf",
+      "sha256": "dcc87e72fda49803a8ffc24b15b13bd735b1334194b7daae98d4d052ea0ec0b2",
+      "fecha_descarga_utc": "2026-08-15T15:18:22.792576+00:00",
+      "content_type": "application/pdf"
     }
   ],
-  "generado_en_utc": "2026-08-15T14:24:51.693792+00:00"
+  "generado_en_utc": "2026-08-15T15:18:22.792634+00:00"
 }
