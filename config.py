@@ -32,7 +32,9 @@ CNE_REQUEST_DELAY_SECONDS = float(os.getenv("CNE_REQUEST_DELAY_SECONDS", "0.7"))
 # --- IA (OpenRouter, API compatible con OpenAI) ---
 # Nunca se escriben secretos en este archivo ni en el repositorio.
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat-v3.1")
+# Modelo gratuito con salida JSON fiable. Si se define OPENROUTER_MODEL en .env,
+# ese valor tiene prioridad para permitir elegir un modelo concreto conscientemente.
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b:free")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 # --- Fuentes oficiales (completar con endpoints reales durante el hackathon) ---

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8000";
+// El 8001 evita colisionar con una instancia anterior de desarrollo que puede
+// conservar variables de entorno obsoletas. Puede sobrescribirse en producción.
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8001";
 
 export async function POST(req: NextRequest) {
   try {

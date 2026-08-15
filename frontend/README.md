@@ -1,4 +1,19 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend
+
+Requiere Node.js 20.9+ y npm 10+.
+
+```powershell
+Copy-Item .env.example .env.local
+npm ci
+npm run dev:3000
+```
+
+El frontend se abre en `http://localhost:3000` y envía la validación al backend
+definido por `BACKEND_URL` en `.env.local` (por defecto,
+`http://localhost:8001`). La configuración completa está en el
+[README de la raíz](../README.md).
+
+## Documentación de Next.js
 
 ## Getting Started
 
