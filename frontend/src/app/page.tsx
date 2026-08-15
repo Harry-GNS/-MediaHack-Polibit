@@ -19,11 +19,12 @@ export default function Home() {
     });
   }, []);
 
-  const handleStart = () => {
+  const handleNav = (path: string) => {
+    if (!path) return;
     gsap.to(introRef.current, {
       opacity: 0, y: -40, duration: 0.6, ease: "power3.in",
       onComplete: () => {
-        router.push('/comparacion');
+        router.push(path);
       }
     });
   };
@@ -66,10 +67,18 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Botón Inferior Centrado */}
-        <div className="absolute bottom-16 z-30 intro-item transform translate-y-8 opacity-0">
-          <button onClick={handleStart} className="px-10 py-4 bg-white text-dark rounded-full font-medium hover:bg-gray-200 transition-colors flex items-center gap-3 shadow-[0_0_30px_rgba(255,255,255,0.15)] uppercase tracking-widest text-sm hover:scale-105 transform duration-300">
+        {/* Botones Inferiores Centrados */}
+        <div className="absolute bottom-16 z-30 intro-item transform translate-y-8 opacity-0 flex flex-col md:flex-row gap-4 md:gap-6 items-center">
+          <button onClick={() => handleNav('/verify')} className="px-8 py-4 bg-white text-dark rounded-full font-bold hover:bg-gray-200 transition-all flex items-center gap-3 shadow-[0_0_30px_rgba(255,255,255,0.15)] uppercase tracking-widest text-xs hover:scale-105 duration-300">
             Iniciar Auditoría
+          </button>
+
+          <button onClick={() => handleNav('/comparacion')} className="px-8 py-4 bg-black/40 border border-white/20 text-white rounded-full font-medium hover:bg-white/10 transition-all flex items-center gap-3 uppercase tracking-widest text-xs hover:scale-105 duration-300 backdrop-blur-md">
+            Comparar planes
+          </button>
+
+          <button className="px-8 py-4 bg-black/40 border border-white/10 text-white/50 rounded-full font-medium cursor-not-allowed transition-all flex items-center gap-3 uppercase tracking-widest text-xs backdrop-blur-md">
+            Próximamente
           </button>
         </div>
       </div>
