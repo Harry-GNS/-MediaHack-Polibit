@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, LoaderCircle, Search, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, LoaderCircle, Search, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 type Proceso = { id: string; nombre: string; cantones?: string[] };
@@ -38,21 +38,21 @@ function EnlaceFuente({ item }: { item: Promesa }) {
 function TablaComparacion({ grupos, candidatos }: { grupos: Grupo[]; candidatos: Candidato[] }) {
   if (!grupos.length) return <p className="text-sm text-gray-500">No se encontraron ámbitos para esta vista.</p>;
   return (
-    <div className="overflow-x-auto border border-white/10 rounded-2xl">
+    <div className="overflow-x-auto mt-8 pb-8">
       <table className="w-full min-w-[720px] text-left text-sm">
-        <thead className="bg-white/5 text-[10px] uppercase tracking-[.18em] text-gray-400">
-          <tr><th className="p-4 font-medium">Ámbito</th>{candidatos.map(c => <th className="p-4 font-medium" key={c.id}>{c.nombre}</th>)}</tr>
+        <thead className="border-b border-white/10 text-[10px] uppercase tracking-[.18em] text-gray-400">
+          <tr><th className="py-4 pr-6 font-medium">Ámbito</th>{candidatos.map(c => <th className="py-4 px-6 font-medium" key={c.id}>{c.nombre}</th>)}</tr>
         </thead>
-        <tbody className="divide-y divide-white/10">
+        <tbody className="divide-y divide-white/5">
           {grupos.map((grupo, index) => (
-            <tr key={`${grupo.ambito}-${index}`} className="align-top hover:bg-white/[.025]">
-              <td className="p-4 text-accent font-mono text-xs">{grupo.ambito}</td>
+            <tr key={`${grupo.ambito}-${index}`} className="align-top hover:bg-white/[.025] transition-colors">
+              <td className="py-6 pr-6 text-accent font-mono text-[10px] tracking-widest">{grupo.ambito}</td>
               {candidatos.map(candidato => {
                 const items = grupo.propuestas_por_candidato.find(item => item.candidato === candidato.id)?.propuestas ?? [];
                 return <td className="p-4 leading-relaxed text-gray-300" key={candidato.id}>
                   {items.length ? items.map((item, itemIndex) => <div className="mb-3 last:mb-0" key={`${item.id}-${itemIndex}`}>
-                    <blockquote className="whitespace-pre-wrap border-l border-white/20 pl-3">{citaTextual(item)}</blockquote>
-                    <p className="mt-2"><EnlaceFuente item={item} /></p>
+                    <p>{proposal(item)}</p>
+                    <p className="mt-1 text-[10px] font-mono text-gray-500">Pág. {item.pagina_o_seccion ?? "s/d"}</p>
                   </div>) : <span className="text-gray-600">Sin propuesta relacionada</span>}
                 </td>;
               })}
@@ -164,24 +164,41 @@ export default function ComparacionPage() {
         <div className="flex items-center gap-2 text-xs text-gray-400"><ShieldCheck className="h-4 w-4 text-accent" /> Sin recomendaciones ni evaluación de candidaturas.</div>
       </header>
 
-      <section className="glass rounded-2xl p-5 md:p-7">
-        <div className="grid gap-5 md:grid-cols-2">
-          <label className="text-xs font-mono uppercase tracking-wider text-gray-400">Proceso electoral
-            <select value={procesoId} onChange={event => cambiarProceso(event.target.value)} className="mt-2 block w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none focus:border-accent">
-              {procesos.map(item => <option className="bg-dark" value={item.id} key={item.id}>{item.nombre}</option>)}
-            </select>
-          </label>
-          <label className="text-xs font-mono uppercase tracking-wider text-gray-400">Cantón
-            <select value={canton} onChange={event => setCanton(event.target.value)} className="mt-2 block w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none focus:border-accent">
-              {cantones.map(item => <option className="bg-dark" value={item} key={item}>{item}</option>)}
-            </select>
-          </label>
+      {/* Selection Area - Editorial minimal style */}
+      <section className="mb-12">
+        <div className="flex flex-col md:flex-row gap-8 md:gap-24 border-b border-white/10 pb-10">
+          <div className="flex-1 group">
+            <label className="block text-[10px] font-mono uppercase tracking-[0.3em] text-accent mb-4 opacity-70 group-hover:opacity-100 transition-opacity">Proceso electoral</label>
+            <div className="relative">
+              <select value={procesoId} onChange={event => cambiarProceso(event.target.value)} className="w-full bg-transparent text-2xl md:text-4xl font-light text-white outline-none appearance-none cursor-pointer border-b border-transparent focus:border-white/20 pb-3 pr-10 transition-colors">
+                {procesos.map(item => <option className="bg-dark text-lg" value={item.id} key={item.id}>{item.nombre}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-500 pointer-events-none transition-colors group-hover:text-white" />
+            </div>
+          </div>
+          <div className="flex-1 group">
+            <label className="block text-[10px] font-mono uppercase tracking-[0.3em] text-accent mb-4 opacity-70 group-hover:opacity-100 transition-opacity">Cantón</label>
+            <div className="relative">
+              <select value={canton} onChange={event => setCanton(event.target.value)} className="w-full bg-transparent text-2xl md:text-4xl font-light text-white outline-none appearance-none cursor-pointer border-b border-transparent focus:border-white/20 pb-3 pr-10 transition-colors">
+                {cantones.map(item => <option className="bg-dark text-lg" value={item} key={item}>{item}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 text-gray-500 pointer-events-none transition-colors group-hover:text-white" />
+            </div>
+          </div>
         </div>
-        <p className="mt-5 border-l-2 border-accent pl-3 text-sm text-gray-300">Elige dos candidaturas a alcaldía para una comparación municipal directa.</p>
+        <p className="mt-6 text-sm text-gray-400 font-light">Elige dos candidaturas a alcaldía para una comparación municipal directa.</p>
       </section>
 
       <section className="mt-7">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-4"><h2 className="text-xl">Candidaturas disponibles <span className="text-sm text-gray-500">({seleccionados.length}/2)</span></h2><button onClick={procesar} disabled={procesando || seleccionados.length !== 2} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-medium text-dark disabled:cursor-not-allowed disabled:opacity-40">{procesando && <LoaderCircle className="h-4 w-4 animate-spin" />}{procesando ? "Procesando…" : "Procesar planes seleccionados"}</button></div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4"><h2 className="text-xl">Candidaturas disponibles <span className="text-sm text-gray-500">({seleccionados.length}/2)</span></h2>
+          <button onClick={procesar} disabled={procesando || seleccionados.length !== 2} className="group relative px-6 py-4 bg-white text-dark rounded-full overflow-hidden disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
+            <div className="absolute inset-0 w-full h-full bg-accent -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[0.16,1,0.3,1] group-disabled:hidden"></div>
+            <span className="relative z-10 text-[10px] font-bold tracking-[0.2em] uppercase group-hover:text-white transition-colors duration-700 flex items-center gap-3">
+              {procesando && <LoaderCircle className="h-4 w-4 animate-spin" />}
+              {procesando ? "Procesando…" : "Procesar planes seleccionados"}
+            </span>
+          </button>
+        </div>
         <p className="mb-5 text-sm text-gray-400">{estado}</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {candidatos.map(candidato => { const activo = seleccionados.includes(candidato.id); return <button key={candidato.id} onClick={() => alternarCandidato(candidato.id)} className={`rounded-2xl border p-5 text-left transition ${activo ? "border-accent bg-accent/10" : "border-white/10 bg-white/[.02] hover:border-white/30"}`}>
@@ -191,13 +208,29 @@ export default function ComparacionPage() {
         </div>
       </section>
 
-      <section className="mt-10 grid gap-7 xl:grid-cols-[1.7fr_1fr]">
-        <div className="glass rounded-2xl p-5 md:p-7"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl">Comparación por ámbitos</h2><p className="mt-1 text-sm text-gray-500">Cada celda conserva la página de la evidencia.</p></div><div className="flex gap-2"><button onClick={() => cargarComparacion("similitudes")} className="rounded-lg border border-accent/50 px-3 py-2 text-xs text-accent hover:bg-accent/10">Ámbitos compartidos</button><button onClick={() => cargarComparacion("diferencias")} className="rounded-lg border border-white/20 px-3 py-2 text-xs hover:bg-white/10">Diferencias</button></div></div>
-          {vista && <div className="mt-5"><p className="mb-3 font-mono text-xs uppercase tracking-wider text-gray-500">{vista === "similitudes" ? "Propuestas relacionadas por ámbito" : "Ámbitos no compartidos"}</p><TablaComparacion grupos={grupos} candidatos={candidatosSeleccionados} /></div>}
+      <section className="mt-16 border-t border-white/10 pt-16 grid gap-16 xl:grid-cols-[1.7fr_1fr]">
+        <div className="flex flex-col">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end justify-between mb-10">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-light">Comparación por ámbitos</h2>
+              <p className="mt-3 text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500">Cada celda conserva la página de la evidencia.</p>
+            </div>
+            <div className="flex gap-8 border-b border-white/10 pb-2">
+              <button onClick={() => cargarComparacion("similitudes")} className={`text-[10px] font-mono uppercase tracking-[0.3em] transition-all duration-300 relative pb-2 ${vista === 'similitudes' ? 'text-accent' : 'text-gray-500 hover:text-white'}`}>
+                Ámbitos compartidos
+                {vista === 'similitudes' && <div className="absolute -bottom-[1px] left-0 w-full h-[1px] bg-accent" />}
+              </button>
+              <button onClick={() => cargarComparacion("diferencias")} className={`text-[10px] font-mono uppercase tracking-[0.3em] transition-all duration-300 relative pb-2 ${vista === 'diferencias' ? 'text-white' : 'text-gray-500 hover:text-white'}`}>
+                Diferencias
+                {vista === 'diferencias' && <div className="absolute -bottom-[1px] left-0 w-full h-[1px] bg-white" />}
+              </button>
+            </div>
+          </div>
+          {vista && <div className="mt-5"><p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-gray-500">{vista === "similitudes" ? "Propuestas relacionadas por ámbito" : "Ámbitos no compartidos"}</p><TablaComparacion grupos={grupos} candidatos={candidatosSeleccionados} /></div>}
         </div>
         <aside className="rounded-2xl border border-accent/20 bg-[#061c29] p-5 md:p-7"><h2 className="text-xl">Pregunta a los planes</h2><p className="mt-2 text-sm leading-relaxed text-gray-300">Pregunta sólo por propuestas de los planes procesados. Las consultas fuera de ese ámbito se bloquean de forma segura.</p>
           <form onSubmit={preguntar} className="mt-5"><textarea value={pregunta} onChange={event => setPregunta(event.target.value)} maxLength={600} placeholder="Ej. ¿Qué proponen sobre seguridad y espacio público?" className="min-h-28 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm outline-none focus:border-accent" /><button className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-dark"><Search className="h-4 w-4" /> Preguntar con evidencia</button></form>
-          {respuesta && <div className="mt-6 border-t border-white/10 pt-5"><h3 className="text-sm font-medium text-accent">Fragmentos textuales recuperados</h3><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{respuesta}</p>{evidencias.length > 0 && <div className="mt-5 overflow-x-auto rounded-xl border border-white/10"><table className="w-full min-w-[560px] text-left text-xs"><thead className="bg-white/5 text-gray-400"><tr><th className="p-3">Candidatura</th><th className="p-3">Cita textual del plan</th><th className="p-3">Fuente</th></tr></thead><tbody className="divide-y divide-white/10">{evidencias.map((item, index) => <tr className="align-top" key={`${item.id}-${index}`}><td className="p-3">{item.nombre_candidato ?? item.candidato}</td><td className="whitespace-pre-wrap p-3 leading-relaxed text-gray-300">{citaTextual(item)}</td><td className="p-3"><EnlaceFuente item={item} /></td></tr>)}</tbody></table></div>}</div>}
+          {respuesta && <div className="mt-6 border-t border-white/10 pt-5"><h3 className="text-sm font-medium text-accent">Respuesta basada en evidencia</h3><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{respuesta}</p>{evidencias.length > 0 && <div className="mt-5 overflow-x-auto rounded-xl border border-white/10"><table className="w-full min-w-[480px] text-left text-xs"><thead className="bg-white/5 text-gray-400"><tr><th className="p-3">Candidatura</th><th className="p-3">Propuesta</th><th className="p-3">Pág.</th></tr></thead><tbody className="divide-y divide-white/10">{evidencias.map((item, index) => <tr key={`${item.id}-${index}`}><td className="p-3">{item.candidato}</td><td className="p-3 text-gray-300">{proposal(item)}</td><td className="p-3 text-gray-400">{item.pagina_o_seccion ?? "s/d"}</td></tr>)}</tbody></table></div>}</div>}
         </aside>
       </section>
     </div>

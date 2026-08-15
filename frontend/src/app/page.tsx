@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import gsap from 'gsap';
 import { Canvas } from '@react-three/fiber';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 // Components
 import CanvasBackground from '@/components/CanvasBackground';
@@ -57,6 +58,21 @@ export default function Home() {
             <p className="mt-8 text-sm md:text-base text-gray-400 font-light max-w-xs md:max-w-sm leading-relaxed">
               Visión panorámica sobre el poder. Escrutinio algorítmico y evidencia en alta resolución.
             </p>
+          </div>
+
+          {/* Lupa Background Element */}
+          <div className="absolute inset-0 z-0 flex items-center justify-center intro-item pointer-events-none opacity-10 brightness-50">
+            <div className="relative w-[200px] h-[200px] md:w-[350px] md:h-[350px] lg:w-[450px] lg:h-[450px]">
+              <Image 
+                src="/luupa-final.png" 
+                alt="Lupa" 
+                fill 
+                className="object-contain"
+                priority
+              />
+              {/* Degradado radial para oscurecer los bordes */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,transparent_30%,var(--color-dark)_70%)]"></div>
+            </div>
           </div>
 
           {/* Texto Derecho */}
