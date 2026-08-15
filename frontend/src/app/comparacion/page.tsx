@@ -1,0 +1,200 @@
+"use client";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Check, LoaderCircle, Search, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+
+type Proceso = { id: string; nombre: string; cantones?: string[] };
+type Candidato = {
+  id: string; nombre: string; dignidad: string; territorio?: string;
+  organizacion_politica?: string; fuente?: string;
+};
+type Promesa = {
+  id?: string; candidato?: string; categoria?: string; accion?: string; objeto?: string;
+  propuesta?: string; texto_original?: string; pagina_o_seccion?: string | number;
+};
+type Grupo = { ambito: string; propuestas_por_candidato: { candidato: string; propuestas: Promesa[] }[] };
+
+const api = async <T,>(path: string, init?: RequestInit): Promise<T> => {
+  const response = await fetch(`/backend${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.detail ?? `Error ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+};
+
+const proposal = (item: Promesa) =>
+  item.propuesta || [item.accion, item.objeto].filter(Boolean).join(" ") || item.texto_original || "Propuesta sin texto disponible.";
+
+function TablaComparacion({ grupos, candidatos }: { grupos: Grupo[]; candidatos: Candidato[] }) {
+  if (!grupos.length) return <p className="text-sm text-gray-500">No se encontraron ámbitos para esta vista.</p>;
+  return (
+    <div className="overflow-x-auto border border-white/10 rounded-2xl">
+      <table className="w-full min-w-[720px] text-left text-sm">
+        <thead className="bg-white/5 text-[10px] uppercase tracking-[.18em] text-gray-400">
+          <tr><th className="p-4 font-medium">Ámbito</th>{candidatos.map(c => <th className="p-4 font-medium" key={c.id}>{c.nombre}</th>)}</tr>
+        </thead>
+        <tbody className="divide-y divide-white/10">
+          {grupos.map((grupo, index) => (
+            <tr key={`${grupo.ambito}-${index}`} className="align-top hover:bg-white/[.025]">
+              <td className="p-4 text-accent font-mono text-xs">{grupo.ambito}</td>
+              {candidatos.map(candidato => {
+                const items = grupo.propuestas_por_candidato.find(item => item.candidato === candidato.id)?.propuestas ?? [];
+                return <td className="p-4 leading-relaxed text-gray-300" key={candidato.id}>
+                  {items.length ? items.map((item, itemIndex) => <div className="mb-3 last:mb-0" key={`${item.id}-${itemIndex}`}>
+                    <p>{proposal(item)}</p>
+                    <p className="mt-1 text-[10px] font-mono text-gray-500">Pág. {item.pagina_o_seccion ?? "s/d"}</p>
+                  </div>) : <span className="text-gray-600">Sin propuesta relacionada</span>}
+                </td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default function ComparacionPage() {
+  const [procesos, setProcesos] = useState<Proceso[]>([]);
+  const [procesoId, setProcesoId] = useState("");
+  const [canton, setCanton] = useState("");
+  const [candidatos, setCandidatos] = useState<Candidato[]>([]);
+  const [seleccionados, setSeleccionados] = useState<string[]>([]);
+  const [estado, setEstado] = useState("Selecciona dos candidaturas para comparar sus planes públicos.");
+  const [procesando, setProcesando] = useState(false);
+  const [vista, setVista] = useState<"similitudes" | "diferencias" | null>(null);
+  const [grupos, setGrupos] = useState<Grupo[]>([]);
+  const [pregunta, setPregunta] = useState("");
+  const [respuesta, setRespuesta] = useState("");
+  const [evidencias, setEvidencias] = useState<Promesa[]>([]);
+
+  const proceso = useMemo(() => procesos.find(item => item.id === procesoId), [procesos, procesoId]);
+  const candidatosSeleccionados = useMemo(() => candidatos.filter(c => seleccionados.includes(c.id)), [candidatos, seleccionados]);
+  const cantones = proceso?.cantones ?? (canton ? [canton] : []);
+
+  useEffect(() => {
+    api<Proceso[]>("/procesos-electorales")
+      .then(data => {
+        setProcesos(data);
+        const municipal = data.find(item => item.cantones?.length) ?? data[0];
+        if (municipal) { setProcesoId(municipal.id); setCanton(municipal.cantones?.[0] ?? ""); }
+      })
+      .catch(error => setEstado(`No se pudo conectar al backend: ${error.message}`));
+  }, []);
+
+  useEffect(() => {
+    if (!procesoId || !canton) return;
+    setSeleccionados([]); setGrupos([]); setVista(null); setRespuesta("");
+    api<Candidato[]>(`/procesos-electorales/${encodeURIComponent(procesoId)}/candidaturas?canton=${encodeURIComponent(canton)}`)
+      .then(setCandidatos)
+      .catch(error => { setCandidatos([]); setEstado(`No se pudieron cargar las candidaturas: ${error.message}`); });
+  }, [procesoId, canton]);
+
+  const cambiarProceso = (id: string) => {
+    setProcesoId(id);
+    const siguiente = procesos.find(item => item.id === id);
+    setCanton(siguiente?.cantones?.[0] ?? "");
+  };
+
+  const alternarCandidato = (id: string) => {
+    setSeleccionados(actual => actual.includes(id) ? actual.filter(item => item !== id) : actual.length < 2 ? [...actual, id] : actual);
+  };
+
+  const esperarProcesamiento = async (trabajoId: string) => {
+    for (let intento = 0; intento < 180; intento += 1) {
+      const trabajo = await api<{ estado: string; mensaje: string }>(`/procesamientos/${trabajoId}`);
+      setEstado(trabajo.mensaje);
+      if (trabajo.estado === "completado") return;
+      if (trabajo.estado === "fallido") throw new Error(trabajo.mensaje);
+      await new Promise(resolve => setTimeout(resolve, 1800));
+    }
+    throw new Error("El procesamiento está tomando más de lo esperado. Revisa la consola del backend.");
+  };
+
+  const procesar = async () => {
+    if (seleccionados.length !== 2) { setEstado("Selecciona exactamente dos candidaturas."); return; }
+    setProcesando(true); setEstado("Descargando y extrayendo evidencia de los planes públicos…");
+    try {
+      const trabajo = await api<{ trabajo_id: string }>(`/procesos-electorales/${encodeURIComponent(procesoId)}/procesar-planes`, {
+        method: "POST", body: JSON.stringify({ candidato_ids: seleccionados, max_fragmentos: 40 }),
+      });
+      await esperarProcesamiento(trabajo.trabajo_id);
+      setEstado("Planes listos. Elige ámbitos compartidos o diferencias para ver la tabla.");
+    } catch (error) { setEstado(error instanceof Error ? error.message : "Falló el procesamiento."); }
+    finally { setProcesando(false); }
+  };
+
+  const cargarComparacion = async (tipo: "similitudes" | "diferencias") => {
+    if (seleccionados.length !== 2) { setEstado("Procesa y selecciona dos candidaturas primero."); return; }
+    try {
+      const resultado = await api<{ similitudes: Grupo[]; diferencias: Grupo[] }>("/comparaciones", {
+        method: "POST", body: JSON.stringify({ candidato_ids: seleccionados }),
+      });
+      setVista(tipo); setGrupos(resultado[tipo]);
+      setEstado(tipo === "similitudes" ? "Ámbitos compartidos: no implica que las propuestas sean idénticas." : "Ámbitos con propuestas de una sola candidatura.");
+    } catch (error) { setEstado(error instanceof Error ? error.message : "No se pudo generar la comparación."); }
+  };
+
+  const preguntar = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!pregunta.trim()) return;
+    try {
+      const resultado = await api<{ respuesta: string; evidencias: Promesa[] }>("/preguntas", {
+        method: "POST", body: JSON.stringify({ pregunta, candidato_ids: seleccionados }),
+      });
+      setRespuesta(resultado.respuesta); setEvidencias(resultado.evidencias);
+    } catch (error) { setRespuesta(error instanceof Error ? error.message : "No se pudo responder la pregunta."); setEvidencias([]); }
+  };
+
+  return <main className="min-h-screen overflow-y-auto bg-dark bg-grid text-white px-5 py-10 md:px-12 md:py-14">
+    <div className="mx-auto max-w-7xl">
+      <Link href="/" className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[.25em] text-gray-500 hover:text-white"><ArrowLeft className="h-3 w-3" /> Inicio</Link>
+      <header className="mt-10 mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div><p className="font-mono text-xs uppercase tracking-[.25em] text-accent">CondorLens · Elecciones seccionales</p><h1 className="mt-3 text-4xl font-light md:text-6xl">Comparador de <span className="text-accent">planes</span></h1><p className="mt-4 max-w-2xl text-gray-400">Compara candidaturas a alcaldía del mismo cantón con evidencia trazable de sus planes públicos.</p></div>
+        <div className="flex items-center gap-2 text-xs text-gray-400"><ShieldCheck className="h-4 w-4 text-accent" /> Sin recomendaciones ni evaluación de candidaturas.</div>
+      </header>
+
+      <section className="glass rounded-2xl p-5 md:p-7">
+        <div className="grid gap-5 md:grid-cols-2">
+          <label className="text-xs font-mono uppercase tracking-wider text-gray-400">Proceso electoral
+            <select value={procesoId} onChange={event => cambiarProceso(event.target.value)} className="mt-2 block w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none focus:border-accent">
+              {procesos.map(item => <option className="bg-dark" value={item.id} key={item.id}>{item.nombre}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-mono uppercase tracking-wider text-gray-400">Cantón
+            <select value={canton} onChange={event => setCanton(event.target.value)} className="mt-2 block w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none focus:border-accent">
+              {cantones.map(item => <option className="bg-dark" value={item} key={item}>{item}</option>)}
+            </select>
+          </label>
+        </div>
+        <p className="mt-5 border-l-2 border-accent pl-3 text-sm text-gray-300">Elige dos candidaturas a alcaldía para una comparación municipal directa.</p>
+      </section>
+
+      <section className="mt-7">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4"><h2 className="text-xl">Candidaturas disponibles <span className="text-sm text-gray-500">({seleccionados.length}/2)</span></h2><button onClick={procesar} disabled={procesando || seleccionados.length !== 2} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-medium text-dark disabled:cursor-not-allowed disabled:opacity-40">{procesando && <LoaderCircle className="h-4 w-4 animate-spin" />}{procesando ? "Procesando…" : "Procesar planes seleccionados"}</button></div>
+        <p className="mb-5 text-sm text-gray-400">{estado}</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {candidatos.map(candidato => { const activo = seleccionados.includes(candidato.id); return <button key={candidato.id} onClick={() => alternarCandidato(candidato.id)} className={`rounded-2xl border p-5 text-left transition ${activo ? "border-accent bg-accent/10" : "border-white/10 bg-white/[.02] hover:border-white/30"}`}>
+            <div className="flex items-start justify-between gap-3"><div><h3 className="font-medium">{candidato.nombre}</h3><p className="mt-1 text-xs text-gray-400">{candidato.dignidad}</p></div><span className={`flex h-5 w-5 items-center justify-center rounded border ${activo ? "border-accent bg-accent text-dark" : "border-gray-600"}`}>{activo && <Check className="h-3 w-3" />}</span></div>
+            <p className="mt-4 text-xs leading-relaxed text-gray-500">{candidato.organizacion_politica ?? "Plan público disponible"}</p>
+          </button>; })}
+        </div>
+      </section>
+
+      <section className="mt-10 grid gap-7 xl:grid-cols-[1.7fr_1fr]">
+        <div className="glass rounded-2xl p-5 md:p-7"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl">Comparación por ámbitos</h2><p className="mt-1 text-sm text-gray-500">Cada celda conserva la página de la evidencia.</p></div><div className="flex gap-2"><button onClick={() => cargarComparacion("similitudes")} className="rounded-lg border border-accent/50 px-3 py-2 text-xs text-accent hover:bg-accent/10">Ámbitos compartidos</button><button onClick={() => cargarComparacion("diferencias")} className="rounded-lg border border-white/20 px-3 py-2 text-xs hover:bg-white/10">Diferencias</button></div></div>
+          {vista && <div className="mt-5"><p className="mb-3 font-mono text-xs uppercase tracking-wider text-gray-500">{vista === "similitudes" ? "Propuestas relacionadas por ámbito" : "Ámbitos no compartidos"}</p><TablaComparacion grupos={grupos} candidatos={candidatosSeleccionados} /></div>}
+        </div>
+        <aside className="rounded-2xl border border-accent/20 bg-[#061c29] p-5 md:p-7"><h2 className="text-xl">Pregunta a los planes</h2><p className="mt-2 text-sm leading-relaxed text-gray-300">Pregunta sólo por propuestas de los planes procesados. Las consultas fuera de ese ámbito se bloquean de forma segura.</p>
+          <form onSubmit={preguntar} className="mt-5"><textarea value={pregunta} onChange={event => setPregunta(event.target.value)} maxLength={600} placeholder="Ej. ¿Qué proponen sobre seguridad y espacio público?" className="min-h-28 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm outline-none focus:border-accent" /><button className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-dark"><Search className="h-4 w-4" /> Preguntar con evidencia</button></form>
+          {respuesta && <div className="mt-6 border-t border-white/10 pt-5"><h3 className="text-sm font-medium text-accent">Respuesta basada en evidencia</h3><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{respuesta}</p>{evidencias.length > 0 && <div className="mt-5 overflow-x-auto rounded-xl border border-white/10"><table className="w-full min-w-[480px] text-left text-xs"><thead className="bg-white/5 text-gray-400"><tr><th className="p-3">Candidatura</th><th className="p-3">Propuesta</th><th className="p-3">Pág.</th></tr></thead><tbody className="divide-y divide-white/10">{evidencias.map((item, index) => <tr key={`${item.id}-${index}`}><td className="p-3">{item.candidato}</td><td className="p-3 text-gray-300">{proposal(item)}</td><td className="p-3 text-gray-400">{item.pagina_o_seccion ?? "s/d"}</td></tr>)}</tbody></table></div>}</div>}
+        </aside>
+      </section>
+    </div>
+  </main>;
+}

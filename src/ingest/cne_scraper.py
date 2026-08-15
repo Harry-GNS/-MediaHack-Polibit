@@ -47,6 +47,14 @@ class ProcesoElectoral:
     candidaturas_directas: tuple["CandidaturaCNE", ...] = ()
 
     def resumen(self) -> dict[str, object]:
+        cantones = list(dict.fromkeys(
+            territorio
+            for territorio in (
+                *(fuente.territorio for fuente in self.fuentes),
+                *(candidatura.territorio for candidatura in self.candidaturas_directas),
+            )
+            if territorio
+        ))
         return {
             "id": self.id,
             "nombre": self.nombre,
@@ -54,6 +62,7 @@ class ProcesoElectoral:
             "fuente_oficial": self.fuente_oficial,
             "dignidades_disponibles": [fuente.dignidad for fuente in self.fuentes],
             "candidaturas_verificadas": len(self.candidaturas_directas),
+            "cantones": cantones,
         }
 
 

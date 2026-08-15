@@ -11,11 +11,22 @@ con `{"candidato_ids": ["..."]}`. Sólo se siguen y descargan URLs bajo
 `cne.gob.ec`; cada descarga se registra con URL fuente, fecha y SHA-256 en
 `data/raw/<proceso>/manifest.json`.
 
+El frontend de CondorLens se ejecuta separado del API. Requiere **Node.js 20.9 o
+superior** (Next.js 16 no funciona con Node 14). En dos terminales ejecuta:
+
 ```powershell
-python -m uvicorn src.api.main:app --reload
+# Terminal 1: API y pipeline Python
+python -m uvicorn src.api.main:app --reload --port 8000
 ```
 
-Abre `http://127.0.0.1:8000` para la interfaz. La vista está enfocada en
+```powershell
+# Terminal 2: frontend Next.js
+cd frontend
+npm ci
+npm run dev -- --port 3000
+```
+
+Abre `http://127.0.0.1:3000/comparacion` para la interfaz. La vista está enfocada en
 elecciones seccionales municipales: proceso, cantón, candidaturas y evidencia
 por página. El panel “Pregunta a los planes” usa OpenRouter sólo desde el
 backend y devuelve las promesas consultadas; no expone la clave al navegador.

@@ -16,7 +16,7 @@ def test_lista_procesos_para_el_menu():
 
 
 def test_entrega_interfaz_municipal():
-    respuesta = TestClient(app).get("/")
+    respuesta = TestClient(app).get("/comparacion")
     assert respuesta.status_code == 200
     assert "Evidencia Municipal" in respuesta.text
     assert "Pregunta a los planes" in respuesta.text

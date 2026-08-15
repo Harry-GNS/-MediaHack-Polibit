@@ -50,6 +50,12 @@ def interfaz() -> FileResponse:
     return FileResponse(_STATIC_DIR / "index.html")
 
 
+@app.get("/comparacion", include_in_schema=False)
+def interfaz_comparacion() -> FileResponse:
+    """Ruta pública principal del comparador municipal."""
+    return FileResponse(_STATIC_DIR / "index.html")
+
+
 @app.get("/candidatos")
 def candidatos_cargados(
     proceso_electoral_id: str | None = None,
