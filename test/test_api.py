@@ -54,5 +54,7 @@ def test_procesa_plan_descargado_con_la_ruta_del_manifiesto(monkeypatch):
         json={"candidato_ids": ["quito-cand"], "max_fragmentos": 40},
     )
 
-    assert respuesta.status_code == 200
+    assert respuesta.status_code == 202
+    estado = TestClient(app).get(f"/procesamientos/{respuesta.json()['trabajo_id']}")
+    assert estado.json()["estado"] == "completado"
     assert llamadas[0][0].endswith("quito-cand.pdf")

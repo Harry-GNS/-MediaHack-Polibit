@@ -10,6 +10,7 @@ from config import (
     OPENROUTER_API_KEY,
     OPENROUTER_BASE_URL,
     OPENROUTER_BATCH_SIZE,
+    OPENROUTER_MAX_OUTPUT_TOKENS,
     OPENROUTER_MODEL,
     OPENROUTER_TIMEOUT_SECONDS,
 )
@@ -112,6 +113,26 @@ def _cliente_por_defecto() -> Any:
     )
 
 
+def _estructurar_lote(cliente: Any, lote: list[FragmentoPromesa]) -> list[dict[str, Any]]:
+    """Solicita un lote y degrada a sublotes si el proveedor lo trunca."""
+    respuesta = cliente.chat.completions.create(
+        model=OPENROUTER_MODEL,
+        # Nunca se reserva más del límite local. Si la salida se trunca, este
+        # mismo método reduce el lote en vez de pedir un crédito mayor.
+        max_tokens=min(OPENROUTER_MAX_OUTPUT_TOKENS, max(400, 100 * len(lote))),
+        temperature=0,
+        messages=[{"role": "user", "content": _prompt_lote(lote)}],
+    )
+    try:
+        return _json_lote_de_respuesta(_contenido_respuesta(respuesta), len(lote))
+    except ValueError:
+        if len(lote) == 1:
+            raise
+        mitad = len(lote) // 2
+        print(f"[4/6] Respuesta incompleta; reintentando en sublotes de {mitad} y {len(lote) - mitad}…", flush=True)
+        return _estructurar_lote(cliente, lote[:mitad]) + _estructurar_lote(cliente, lote[mitad:])
+
+
 def estructurar_documento(
     fragmentos: Iterable[FragmentoPromesa],
     candidato_id: str,
@@ -138,16 +159,7 @@ def estructurar_documento(
     for numero_lote, inicio in enumerate(range(0, len(lista_fragmentos), tamanio_lote), start=1):
         lote = lista_fragmentos[inicio : inicio + tamanio_lote]
         print(f"[4/6] Estructurando lote {numero_lote}/{total_lotes} ({len(lote)} fragmentos)…", flush=True)
-        respuesta = cliente.chat.completions.create(
-            model=OPENROUTER_MODEL,
-            # Un objeto con los ocho campos ocupa normalmente menos de 100
-            # tokens. Limitar la salida evita que el proveedor tarde minutos
-            # generando explicaciones que el contrato prohíbe.
-            max_tokens=max(500, 140 * len(lote)),
-            temperature=0,
-            messages=[{"role": "user", "content": _prompt_lote(lote)}],
-        )
-        datos_lote = _json_lote_de_respuesta(_contenido_respuesta(respuesta), len(lote))
+        datos_lote = _estructurar_lote(cliente, lote)
         for fragmento, datos in zip(lote, datos_lote, strict=True):
             indice = len(promesas) + 1
             promesas.append(
@@ -182,3 +194,39 @@ def _muestra_distribuida(fragmentos: list[FragmentoPromesa], limite: int) -> lis
         return fragmentos
     posiciones = [round(indice * (len(fragmentos) - 1) / (limite - 1)) for indice in range(limite)] if limite > 1 else [0]
     return [fragmentos[posicion] for posicion in posiciones]
+
+
+def estructurar_documento_local(
+    fragmentos: Iterable[FragmentoPromesa], candidato_id: str, fuente_documento: str, max_fragmentos: int | None = None
+) -> list[Promesa]:
+    """Convierte fragmentos trazables a evidencia sin llamar a un proveedor IA."""
+    lista_fragmentos = list(fragmentos)
+    if max_fragmentos is not None and len(lista_fragmentos) > max_fragmentos:
+        lista_fragmentos = _muestra_distribuida(lista_fragmentos, max_fragmentos)
+    promesas: list[Promesa] = []
+    for indice, fragmento in enumerate(lista_fragmentos, start=1):
+        accion = re.search(
+            r"\b(construir(?:emos)?|implementar(?:emos)?|mejorar(?:emos)?|ampliar(?:emos)?|fortalecer(?:emos)?|"
+            r"crear(?:emos)?|promover(?:emos)?|garantizar(?:emos)?|reducir(?:emos)?|desarrollar(?:emos)?)\b",
+            fragmento.texto,
+            re.IGNORECASE,
+        )
+        promesas.append(
+            Promesa(
+                id=f"{candidato_id}-p{fragmento.pagina}-{indice}",
+                candidato=candidato_id,
+                categoria=NO_ESPECIFICADO,
+                accion=accion.group(1).capitalize() if accion else "Propuesta",
+                objeto=fragmento.texto[:180].strip(),
+                cantidad=None,
+                unidad=None,
+                presupuesto=NO_ESPECIFICADO,
+                plazo=None,
+                indicador=None,
+                texto_original=fragmento.texto,
+                fuente_documento=fuente_documento,
+                pagina_o_seccion=str(fragmento.pagina),
+                metadata_ia={"modo": "local_sin_ia", "fragmento_indice": fragmento.indice_en_pagina},
+            )
+        )
+    return promesas

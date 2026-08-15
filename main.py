@@ -13,7 +13,7 @@ import argparse
 from pathlib import Path
 
 from src.calculations.metrics import calcular_todos
-from src.extraction.ai_structurer import estructurar_documento
+from src.extraction.ai_structurer import estructurar_documento, estructurar_documento_local
 from src.extraction.segmenter import segmentar_documento
 from src.ingest.pdf_loader import extraer_texto_por_pagina
 from src.ingest.cne_scraper import CNEError, ScraperCNE
@@ -30,6 +30,7 @@ def correr_flujo(
     dignidad: str | None = None,
     organizacion_politica: str | None = None,
     max_fragmentos: int | None = None,
+    usar_ia: bool = False,
 ) -> None:
     # Validar el documento antes de modificar la base de datos. Así una ruta
     # escrita como ejemplo no deja una candidatura sin evidencia asociada.
@@ -52,8 +53,12 @@ def correr_flujo(
     fragmentos = segmentar_documento(paginas)
     print(f"[3/6] Fragmentos candidatos a promesa encontrados: {len(fragmentos)}")
 
-    promesas = estructurar_documento(fragmentos, candidato_id, ruta_pdf, max_fragmentos=max_fragmentos)
-    print(f"[4/6] Promesas estructuradas por IA: {len(promesas)}")
+    if usar_ia:
+        promesas = estructurar_documento(fragmentos, candidato_id, ruta_pdf, max_fragmentos=max_fragmentos)
+        print(f"[4/6] Promesas estructuradas por IA: {len(promesas)}")
+    else:
+        promesas = estructurar_documento_local(fragmentos, candidato_id, ruta_pdf, max_fragmentos=max_fragmentos)
+        print(f"[4/6] Evidencia estructurada localmente (0 tokens): {len(promesas)}")
 
     guardadas = 0
     for promesa in promesas:
@@ -106,6 +111,7 @@ if __name__ == "__main__":
         type=int,
         help="Modo rápido: máximo de fragmentos a enviar a IA; usa una muestra distribuida por el documento.",
     )
+    parser.add_argument("--usar-ia", action="store_true", help="Usa OpenRouter para estructuración avanzada; consume tokens.")
     args = parser.parse_args()
 
     try:
@@ -136,6 +142,7 @@ if __name__ == "__main__":
             dignidad,
             organizacion_politica,
             args.max_fragmentos,
+            args.usar_ia,
         )
     except (CNEError, FileNotFoundError, ValueError) as error:
         parser.error(str(error))

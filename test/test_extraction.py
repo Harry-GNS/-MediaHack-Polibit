@@ -59,7 +59,7 @@ def test_estructurador_envia_lote_y_conserva_una_evidencia_por_fragmento(monkeyp
 
     class _CompletionsLote:
         def create(self, **kwargs):
-            assert kwargs["max_tokens"] >= 500
+            assert kwargs["max_tokens"] >= 400
             assert "arreglo JSON" in kwargs["messages"][0]["content"]
             respuesta = type("Respuesta", (), {})()
             mensaje = type("Mensaje", (), {"content": """[
@@ -91,3 +91,34 @@ def test_muestra_rapida_cubre_el_documento_y_respeta_el_limite():
     assert len(muestra) == 4
     assert muestra[0].pagina == 1
     assert muestra[-1].pagina == 10
+
+
+def test_reintenta_lote_incompleto_en_sublotes(monkeypatch):
+    monkeypatch.setattr(modulo, "OPENROUTER_BATCH_SIZE", 2)
+    llamadas = []
+
+    class _CompletionsConRecuperacion:
+        def create(self, **kwargs):
+            llamadas.append(kwargs)
+            contenido = "[{\"categoria\":\"educacion\"}]" if "arreglo JSON" in kwargs["messages"][0]["content"] else _Bloque.text
+            respuesta = type("Respuesta", (), {})()
+            respuesta.choices = [type("Eleccion", (), {"message": type("Mensaje", (), {"content": contenido})()})()]
+            return respuesta
+
+    cliente = type("Cliente", (), {"chat": type("Chat", (), {"completions": _CompletionsConRecuperacion()})()})()
+    fragmentos = [FragmentoPromesa("Construir una escuela", pagina=1, indice_en_pagina=1), FragmentoPromesa("Construir un parque", pagina=2, indice_en_pagina=1)]
+
+    promesas = estructurar_documento(fragmentos, "cand", "plan.pdf", cliente=cliente)
+
+    assert len(promesas) == 2
+    assert len(llamadas) == 3
+
+
+def test_estructurador_local_no_requiere_cliente_ni_tokens():
+    fragmento = FragmentoPromesa("Construiremos ciclovías barriales.", pagina=7, indice_en_pagina=1)
+
+    promesa = modulo.estructurar_documento_local([fragmento], "cand", "plan.pdf")[0]
+
+    assert promesa.accion == "Construiremos"
+    assert promesa.texto_original == fragmento.texto
+    assert promesa.metadata_ia["modo"] == "local_sin_ia"

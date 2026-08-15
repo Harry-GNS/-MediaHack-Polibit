@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from config import OPENROUTER_MODEL
+from config import OPENROUTER_MODEL, OPENROUTER_PREGUNTAS_HABILITADO
 from src.extraction.ai_structurer import ConfiguracionIAError, _cliente_por_defecto
 
 _PALABRAS_VACIAS = {
@@ -63,6 +63,20 @@ def pregunta_permitida(pregunta: str, promesas: list[dict[str, object]]) -> bool
     return bool(terminos & terminos_evidencia)
 
 
+def _respuesta_local(evidencias: list[dict[str, object]]) -> str:
+    """Alternativa segura cuando el proveedor IA no está disponible."""
+    lineas = ["Resumen basado exclusivamente en la evidencia procesada:"]
+    for indice, promesa in enumerate(evidencias, start=1):
+        propuesta = " ".join(
+            parte for parte in (str(promesa.get("accion") or "").strip(), str(promesa.get("objeto") or "").strip()) if parte
+        )
+        lineas.append(
+            f"- {promesa.get('candidato')}: {propuesta or promesa.get('texto_original')} "
+            f"(página {promesa.get('pagina_o_seccion')}) [E{indice}]"
+        )
+    return "\n".join(lineas)
+
+
 def responder_pregunta(pregunta: str, promesas: list[dict[str, object]]) -> tuple[str, list[dict[str, object]]]:
     if not pregunta_permitida(pregunta, promesas):
         return _MENSAJE_PREGUNTA_NO_PERMITIDA, []
@@ -74,22 +88,29 @@ def responder_pregunta(pregunta: str, promesas: list[dict[str, object]]) -> tupl
         f"acción: {promesa.get('accion')}; objeto: {promesa.get('objeto')}; texto: {promesa.get('texto_original')}"
         for indice, promesa in enumerate(evidencias, start=1)
     )
+    if not OPENROUTER_PREGUNTAS_HABILITADO:
+        return _respuesta_local(evidencias), evidencias
     sistema = """Responde únicamente con la evidencia de planes de trabajo proporcionada.
 No determines viabilidad, veracidad, calidad ni recomiendes candidatos. Si la evidencia no basta,
 indícalo claramente. Distingue entre lo que dice cada candidato y cita las referencias [E1], [E2].
 Mantén el enfoque de gobierno municipal: alcaldías, concejos, cantones y servicios locales cuando
 la evidencia lo permita."""
-    cliente = _cliente_por_defecto()
-    respuesta = cliente.chat.completions.create(
-        model=OPENROUTER_MODEL,
-        temperature=0,
-        max_tokens=700,
-        messages=[
-            {"role": "system", "content": sistema},
-            {"role": "user", "content": f"Pregunta: {pregunta}\n\nEvidencia:\n{contexto}"},
-        ],
-    )
-    texto = respuesta.choices[0].message.content
-    if not texto:
-        raise ConfiguracionIAError("OpenRouter no devolvió texto para la pregunta.")
-    return texto, evidencias
+    try:
+        cliente = _cliente_por_defecto()
+        respuesta = cliente.chat.completions.create(
+            model=OPENROUTER_MODEL,
+            temperature=0,
+            max_tokens=500,
+            messages=[
+                {"role": "system", "content": sistema},
+                {"role": "user", "content": f"Pregunta: {pregunta}\n\nEvidencia:\n{contexto}"},
+            ],
+        )
+        texto = respuesta.choices[0].message.content
+        if texto:
+            return texto, evidencias
+    except Exception:
+        # La evidencia ya fue seleccionada localmente; nunca se sustituyen ni
+        # se inventan propuestas si el proveedor externo no está disponible.
+        pass
+    return _respuesta_local(evidencias), evidencias

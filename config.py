@@ -38,6 +38,12 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 # un modelo puede fijarse OPENROUTER_BATCH_SIZE=1 en el archivo .env local.
 OPENROUTER_BATCH_SIZE = int(os.getenv("OPENROUTER_BATCH_SIZE", "20"))
 OPENROUTER_TIMEOUT_SECONDS = float(os.getenv("OPENROUTER_TIMEOUT_SECONDS", "90"))
+# Límite conservador para cuentas con saldo reducido. El estructurador divide
+# automáticamente un lote cuando la respuesta no alcanza.
+OPENROUTER_MAX_OUTPUT_TOKENS = int(os.getenv("OPENROUTER_MAX_OUTPUT_TOKENS", "800"))
+# La demo opera con extracción y respuestas locales por defecto: 0 tokens.
+# La IA sólo se activa expresamente desde CLI o configurando esta variable.
+OPENROUTER_PREGUNTAS_HABILITADO = os.getenv("OPENROUTER_PREGUNTAS_HABILITADO", "false").casefold() == "true"
 
 # --- Fuentes oficiales (completar con endpoints reales durante el hackathon) ---
 CNE_PLANES_URL = os.getenv("CNE_PLANES_URL", "")

@@ -24,3 +24,14 @@ def test_bloquea_prompt_injection_y_consulta_fuera_de_los_planes(monkeypatch):
 def test_permite_pregunta_sobre_ambito_de_evidencia():
     promesas = [{"categoria": "movilidad", "accion": "Ampliar", "objeto": "ciclovías", "texto_original": "Ampliar ciclovías barriales."}]
     assert pregunta_permitida("¿Qué plantea sobre ciclovías?", promesas)
+
+
+def test_respuesta_local_si_openrouter_no_esta_disponible(monkeypatch):
+    promesas = [{"id": "p1", "candidato": "cand-a", "categoria": "movilidad", "accion": "Ampliar", "objeto": "ciclovías", "texto_original": "Ampliar ciclovías barriales.", "pagina_o_seccion": "8"}]
+    monkeypatch.setattr("src.questions.answerer._cliente_por_defecto", lambda: (_ for _ in ()).throw(RuntimeError("sin saldo")))
+
+    respuesta, evidencias = responder_pregunta("¿Qué propone sobre movilidad?", promesas)
+
+    assert "cand-a" in respuesta
+    assert "[E1]" in respuesta
+    assert evidencias == promesas

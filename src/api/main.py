@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import logging
+from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -19,6 +20,7 @@ _STATIC_DIR = Path(__file__).resolve().parent / "static"
 app = FastAPI(title="Evidencia Municipal", version="0.2.0")
 logger = logging.getLogger(__name__)
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+_TRABAJOS_PROCESAMIENTO: dict[str, dict[str, object]] = {}
 
 
 class DescargaPlanesRequest(BaseModel):
@@ -133,25 +135,21 @@ def descargar_planes(proceso_id: str, solicitud: DescargaPlanesRequest) -> dict[
         raise _error_cne(error) from error
 
 
-@app.post("/procesos-electorales/{proceso_id}/procesar-planes")
-def procesar_planes(proceso_id: str, solicitud: ProcesarPlanesRequest) -> dict[str, object]:
-    """Descarga planes públicos seleccionados y los deja listos para comparar.
-
-    Se limita a dos candidaturas y a una muestra explícita para que la acción
-    de la interfaz sea apta para la demo; el CLI conserva el modo exhaustivo.
-    """
+def _ejecutar_procesamiento(
+    trabajo_id: str, proceso_id: str, seleccionadas: list[object], max_fragmentos: int
+) -> None:
     try:
         scraper = ScraperCNE()
-        disponibles = {candidatura.id: candidatura for candidatura in scraper.descubrir_candidaturas(proceso_id)}
-        ausentes = sorted(set(solicitud.candidato_ids) - set(disponibles))
-        if ausentes:
-            raise HTTPException(status_code=404, detail={"candidaturas_no_encontradas": ausentes})
-        seleccionadas = [disponibles[candidato_id] for candidato_id in solicitud.candidato_ids]
         manifiesto = scraper.descargar_planes(proceso_id, seleccionadas)
         documentos = {documento["id"]: documento for documento in manifiesto["documentos"]}
         from main import correr_flujo
 
-        for candidatura in seleccionadas:
+        for indice, candidatura in enumerate(seleccionadas, start=1):
+            _TRABAJOS_PROCESAMIENTO[trabajo_id].update({
+                "estado": "procesando",
+                "mensaje": f"Procesando {candidatura.nombre} ({indice}/{len(seleccionadas)})…",
+                "completadas": indice - 1,
+            })
             ruta_pdf = Path(documentos[candidatura.id]["archivo_local"])
             correr_flujo(
                 str(ruta_pdf),
@@ -160,26 +158,53 @@ def procesar_planes(proceso_id: str, solicitud: ProcesarPlanesRequest) -> dict[s
                 candidatura.proceso_electoral_id,
                 candidatura.dignidad,
                 candidatura.organizacion_politica,
-                solicitud.max_fragmentos,
+                max_fragmentos,
             )
-        return {
-            "procesadas": [candidatura.resumen() for candidatura in seleccionadas],
-            "max_fragmentos": solicitud.max_fragmentos,
+        _TRABAJOS_PROCESAMIENTO[trabajo_id].update({
+            "estado": "completado",
             "mensaje": "Planes descargados y evidencia disponible para comparar.",
-        }
-    except CNEError as error:
-        raise _error_cne(error) from error
-    except ConfiguracionIAError as error:
-        raise HTTPException(status_code=503, detail=str(error)) from error
-    except ValueError as error:
-        # Normalmente indica JSON inválido del modelo: se reporta al usuario
-        # para que pueda reintentar sin un 500 opaco.
-        raise HTTPException(status_code=422, detail=str(error)) from error
-    except HTTPException:
-        raise
+            "completadas": len(seleccionadas),
+        })
     except Exception as error:
         logger.exception("Falló el procesamiento de planes del proceso %s", proceso_id)
-        raise HTTPException(
-            status_code=502,
-            detail=f"Falló el procesamiento del plan: {type(error).__name__}: {error}",
-        ) from error
+        texto_error = str(error).casefold()
+        if "credit" in texto_error or "error code: 402" in texto_error or "code': 402" in texto_error:
+            mensaje = "OpenRouter no tiene saldo suficiente para este lote. Reduce el límite de salida o agrega créditos."
+        else:
+            mensaje = f"Falló el procesamiento del plan: {type(error).__name__}. Revisa la consola del servidor para el detalle."
+        _TRABAJOS_PROCESAMIENTO[trabajo_id].update({
+            "estado": "fallido",
+            "mensaje": mensaje,
+        })
+
+
+@app.post("/procesos-electorales/{proceso_id}/procesar-planes", status_code=status.HTTP_202_ACCEPTED)
+def procesar_planes(
+    proceso_id: str, solicitud: ProcesarPlanesRequest, tareas: BackgroundTasks
+) -> dict[str, object]:
+    """Inicia un procesamiento en segundo plano y devuelve de inmediato."""
+    try:
+        disponibles = {candidatura.id: candidatura for candidatura in ScraperCNE().descubrir_candidaturas(proceso_id)}
+    except CNEError as error:
+        raise _error_cne(error) from error
+    ausentes = sorted(set(solicitud.candidato_ids) - set(disponibles))
+    if ausentes:
+        raise HTTPException(status_code=404, detail={"candidaturas_no_encontradas": ausentes})
+    seleccionadas = [disponibles[candidato_id] for candidato_id in solicitud.candidato_ids]
+    trabajo_id = str(uuid4())
+    _TRABAJOS_PROCESAMIENTO[trabajo_id] = {
+        "estado": "en_cola",
+        "mensaje": "Planificando descarga y extracción…",
+        "completadas": 0,
+        "total": len(seleccionadas),
+    }
+    tareas.add_task(_ejecutar_procesamiento, trabajo_id, proceso_id, seleccionadas, solicitud.max_fragmentos)
+    return {"trabajo_id": trabajo_id, **_TRABAJOS_PROCESAMIENTO[trabajo_id]}
+
+
+@app.get("/procesamientos/{trabajo_id}")
+def estado_procesamiento(trabajo_id: str) -> dict[str, object]:
+    try:
+        return {"trabajo_id": trabajo_id, **_TRABAJOS_PROCESAMIENTO[trabajo_id]}
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="No existe ese procesamiento o el servidor se reinició.") from error
