@@ -15,6 +15,8 @@ interface DatoEstadistico {
 interface ResultadoValidacion {
   dato: DatoEstadistico;
   estado: "concordante" | "discrepante" | "no_encontrado";
+  porcentaje: number;
+  diferencias: string | null;
   fuente_url: string | null;
   valor_en_fuente: string | null;
   alerta: string;
@@ -89,6 +91,7 @@ export default function ValidadorPage() {
   // Resumen
   const concordantes = resultados?.filter((r) => r.estado === "concordante").length ?? 0;
   const total = resultados?.length ?? 0;
+  const fuentesAltamenteCoincidentes = resultados?.filter((r) => r.porcentaje >= 85).length ?? 0;
 
   return (
     <main className="min-h-screen bg-[#09090b] text-zinc-100 font-sans">
@@ -193,7 +196,7 @@ export default function ValidadorPage() {
             <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-4 space-y-2">
               <p className="text-sm font-medium text-zinc-300">
                 Resumen: <span className="text-emerald-400 font-semibold">{concordantes}</span> de{" "}
-                <span className="font-semibold">{total}</span> dato{total !== 1 ? "s" : ""} concordante{concordantes !== 1 ? "s" : ""}
+                <span className="font-semibold">{total}</span> fuente{total !== 1 ? "s" : ""} concordante{concordantes !== 1 ? "s" : ""}
               </p>
               <div className="w-full h-2 rounded-full bg-zinc-800 overflow-hidden">
                 <div
@@ -202,6 +205,19 @@ export default function ValidadorPage() {
                 />
               </div>
             </div>
+
+            {/* Alerta de Veracidad Global */}
+            {fuentesAltamenteCoincidentes >= 3 && (
+              <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/30 p-4 flex items-start gap-3 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                <CheckCircle className="text-emerald-400 mt-0.5 flex-shrink-0" size={20} />
+                <div>
+                  <h3 className="font-semibold text-emerald-400">¡Alta Probabilidad de Veracidad!</h3>
+                  <p className="text-sm text-emerald-200/80 mt-1">
+                    Este dato cuenta con al menos 3 fuentes independientes que superan el 85% de coincidencia.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Tarjetas por dato */}
             <div className="space-y-3">
@@ -212,9 +228,24 @@ export default function ValidadorPage() {
                   className={`rounded-xl border p-4 space-y-3 transition ${tarjetaColor(r.estado)}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-mono text-zinc-200 leading-snug">
-                      📊 &ldquo;{r.dato.texto_original}&rdquo;
-                    </p>
+                    <div className="flex items-start gap-3">
+                      {/* Círculo de Porcentaje */}
+                      <div className="relative flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-zinc-950/50 border border-zinc-700/50">
+                        <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                          <circle cx="24" cy="24" r="21" fill="none" className="stroke-zinc-800" strokeWidth="3" />
+                          <circle 
+                            cx="24" cy="24" r="21" fill="none" 
+                            className={`stroke-current ${r.estado === 'concordante' ? 'text-emerald-500' : r.estado === 'discrepante' ? 'text-amber-500' : 'text-red-500'}`} 
+                            strokeWidth="3" strokeDasharray="132" strokeDashoffset={132 - (132 * r.porcentaje) / 100} 
+                            strokeLinecap="round" 
+                          />
+                        </svg>
+                        <span className="text-[11px] font-bold text-zinc-300">{r.porcentaje}%</span>
+                      </div>
+                      <p className="text-sm font-mono text-zinc-200 leading-snug mt-1 line-clamp-3">
+                        📊 &ldquo;{r.dato.texto_original}&rdquo;
+                      </p>
+                    </div>
                     <EstadoBadge estado={r.estado} />
                   </div>
 
@@ -244,6 +275,18 @@ export default function ValidadorPage() {
                   <p className="text-xs text-zinc-400 bg-zinc-800/60 rounded-lg px-3 py-2">
                     {r.alerta}
                   </p>
+
+                  {/* Diferencias desplegables */}
+                  {r.diferencias && r.porcentaje < 100 && (
+                    <details className="group border border-zinc-700/50 rounded-lg overflow-hidden bg-zinc-900/50">
+                      <summary className="text-xs font-medium text-amber-400 cursor-pointer select-none p-3 hover:bg-zinc-800/50 transition">
+                        Ver diferencias encontradas
+                      </summary>
+                      <div className="p-3 pt-0 text-xs text-zinc-300 border-t border-zinc-700/50 mt-1">
+                        {r.diferencias}
+                      </div>
+                    </details>
+                  )}
                 </article>
               ))}
             </div>

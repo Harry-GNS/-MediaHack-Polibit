@@ -20,9 +20,10 @@ _SYSTEM_PROMPT = (
     "Eres un asistente de verificación periodística. "
     "Tu rol es comparar la afirmación o texto del usuario contra el contenido de una fuente. "
     "NUNCA emitas juicios de valor ni digas si algo es verdadero o falso, limítate a indicar si la fuente lo menciona y en qué términos. "
-    "Si la fuente habla de la misma noticia, temática o evento, y la información es similar o parecida, debes marcarlo como 'concordante'. "
-    "Si habla del mismo evento pero los datos contradicen directamente al usuario, pon 'discrepante'. "
-    "Solo usa 'no_encontrado' si la fuente no tiene ABSOLUTAMENTE NADA que ver con el tema. "
+    "Si la fuente habla del mismo evento y los datos generales coinciden, pon 'concordante'. Si contradicen directamente, pon 'discrepante'. "
+    "Solo usa 'no_encontrado' si la fuente no menciona nada al respecto. "
+    "CÁLCULO DEL PORCENTAJE (0-100): Sé EXTREMADAMENTE ESTRICTO. Un 100% significa que TODOS los datos duros (números, cifras, ubicaciones exactas) coinciden de manera idéntica. "
+    "Si la noticia es la misma pero difieren en precisión (ejemplo: '100 km' vs '107 km', o 'más de 100' vs '100 exactos'), debes penalizar el porcentaje y asignarle entre 60% y 85% dependiendo de la magnitud de la diferencia. "
     "Responde exclusivamente con JSON válido."
 )
 
@@ -39,6 +40,8 @@ Analiza si la información del texto ingresado aparece o está respaldada por el
 Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
 {{
   "estado": "concordante" | "discrepante" | "no_encontrado",
+  "porcentaje": <número entero entre 0 y 100 indicando similitud o respaldo semántico>,
+  "diferencias": "<explicación detallada de en qué números, cifras o precisión difieren. O null si es 100% exacto>",
   "valor_en_fuente": "<fragmento o dato de la fuente que se relaciona, o null si no se encuentra>",
   "explicacion": "<una oración neutral describiendo lo encontrado, sin veredictos>"
 }}
@@ -48,6 +51,8 @@ Responde ÚNICAMENTE con este JSON (sin texto adicional, sin markdown):
 class ResultadoValidacion(BaseModel):
     dato: DatoEstadistico
     estado: Literal["concordante", "discrepante", "no_encontrado"]
+    porcentaje: int
+    diferencias: Optional[str] = None
     fuente_url: Optional[str] = None
     valor_en_fuente: Optional[str] = None
     alerta: str
@@ -90,31 +95,38 @@ def _llamar_openrouter(prompt_usuario: str) -> dict:
         raise e
 
 
-def validar_dato(
-    dato: DatoEstadistico,
-    fuentes_scrapeadas: list[dict],
-) -> ResultadoValidacion:
+def validar_texto(texto: str, fuentes_scrapeadas: list[dict]) -> list[ResultadoValidacion]:
     """
-    Valida un dato estadístico contra la lista de fuentes scrapeadas.
-
-    Itera por cada fuente y consulta OpenRouter. Si alguna fuente
-    muestra concordancia, retorna inmediatamente. Si todas discrepan
-    o no encuentran, retorna el peor resultado encontrado.
-
-    Args:
-        dato: El dato estadístico extraído del texto.
-        fuentes_scrapeadas: Lista de resultados de scrapear_url().
-
-    Returns:
-        ResultadoValidacion con el estado final.
+    Valida el texto completo contra cada una de las fuentes y retorna un resultado por fuente.
     """
-    mejor_resultado: Optional[ResultadoValidacion] = None
+    from src.validation.extractor import DatoEstadistico
+
+    dato = DatoEstadistico(
+        texto_original=texto,
+        valor=0.0,
+        unidad="",
+        contexto="Validación de texto completo"
+    )
+
+    resultados_por_fuente = []
 
     for fuente in fuentes_scrapeadas:
         if fuente.get("error"):
-            continue  # Fuente no accesible, saltar
+            # Generamos un resultado de fallo para esta fuente
+            resultados_por_fuente.append(
+                ResultadoValidacion(
+                    dato=dato,
+                    estado="no_encontrado",
+                    porcentaje=0,
+                    diferencias=None,
+                    fuente_url=fuente.get("url"),
+                    valor_en_fuente=None,
+                    alerta=f"Error al extraer la fuente: {fuente['error']}"
+                )
+            )
+            continue
 
-        # Construir texto de la fuente (permitir hasta 30000 chars ya que Gemini/Deepseek soportan mucho contexto)
+        # Construir texto de la fuente
         from app import texto_completo
         contenido = texto_completo(fuente)[:30000]
 
@@ -127,60 +139,41 @@ def validar_dato(
         try:
             respuesta = _llamar_openrouter(prompt)
             estado = respuesta.get("estado", "no_encontrado")
+            porcentaje = respuesta.get("porcentaje", 0)
+            diferencias = respuesta.get("diferencias")
             valor_fuente = respuesta.get("valor_en_fuente")
             explicacion = respuesta.get("explicacion", "Sin información adicional.")
 
-            resultado = ResultadoValidacion(
-                dato=dato,
-                estado=estado,
-                fuente_url=fuente["url"],
-                valor_en_fuente=valor_fuente,
-                alerta=explicacion,
+            # Validación de porcentaje
+            if not isinstance(porcentaje, int):
+                try:
+                    porcentaje = int(porcentaje)
+                except ValueError:
+                    porcentaje = 0
+
+            resultados_por_fuente.append(
+                ResultadoValidacion(
+                    dato=dato,
+                    estado=estado,
+                    porcentaje=porcentaje,
+                    diferencias=diferencias,
+                    fuente_url=fuente["url"],
+                    valor_en_fuente=valor_fuente,
+                    alerta=explicacion,
+                )
+            )
+        except (requests.RequestException, json.JSONDecodeError, KeyError) as e:
+            resultados_por_fuente.append(
+                ResultadoValidacion(
+                    dato=dato,
+                    estado="no_encontrado",
+                    porcentaje=0,
+                    diferencias=None,
+                    fuente_url=fuente["url"],
+                    valor_en_fuente=None,
+                    alerta=f"Error procesando la fuente con IA: {str(e)}",
+                )
             )
 
-            # Si concordante, retornar inmediatamente (mejor caso)
-            if estado == "concordante":
-                return resultado
-
-            # Guardar discrepante como candidato (mejor que no_encontrado)
-            if mejor_resultado is None or (
-                estado == "discrepante" and mejor_resultado.estado == "no_encontrado"
-            ):
-                mejor_resultado = resultado
-
-        except (requests.RequestException, json.JSONDecodeError, KeyError):
-            # Error en esta fuente: continuar con la siguiente
-            continue
-
-    # Si no hubo ningún resultado exitoso, retornar no_encontrado
-    return mejor_resultado or ResultadoValidacion(
-        dato=dato,
-        estado="no_encontrado",
-        fuente_url=None,
-        valor_en_fuente=None,
-        alerta="No se pudo verificar el dato en ninguna de las fuentes proporcionadas.",
-    )
-
-
-def validar_texto(texto: str, fuentes_scrapeadas: list[dict]) -> list[ResultadoValidacion]:
-    """
-    Pipeline completo: valida el texto completo contra las fuentes.
-    
-    Args:
-        texto: El texto ingresado por el usuario.
-        fuentes_scrapeadas: Lista de resultados de scrapear_url().
-
-    Returns:
-        Lista de ResultadoValidacion.
-    """
-    from src.validation.extractor import DatoEstadistico
-
-    dato = DatoEstadistico(
-        texto_original=texto,
-        valor=0.0,
-        unidad="",
-        contexto="Validación de texto completo"
-    )
-
-    return [validar_dato(dato, fuentes_scrapeadas)]
+    return resultados_por_fuente
 
