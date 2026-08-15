@@ -16,7 +16,8 @@
 body {
     background-color: var(--color-dark);
     color: #ffffff;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .bg-grid {
