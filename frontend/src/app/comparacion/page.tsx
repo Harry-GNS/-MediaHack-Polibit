@@ -246,6 +246,8 @@ export default function ComparacionPage() {
             </div>
           </div>
           {vista && <div className="mt-5"><p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-gray-500">{vista === "similitudes" ? "Propuestas relacionadas por ámbito" : "Ámbitos no compartidos"}</p><TablaComparacion grupos={grupos} candidatos={candidatosSeleccionados} /></div>}
+        </div>
+
         {/* Pregunta a los planes */}
         <aside className="flex flex-col">
           <h2 className="text-[10px] font-mono uppercase tracking-[0.3em] text-accent mb-6">Pregunta a los planes</h2>
