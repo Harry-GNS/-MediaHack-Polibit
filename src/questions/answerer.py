@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any
 
 _PALABRAS_VACIAS = {
@@ -17,6 +18,14 @@ _PATRONES_RIESGO = (
     "revela", "reveal", "secreto", "secret", "jailbreak", "roleplay", "actua como", "actúa como",
     "bypass", "```", "<script", "</", "http://", "https://",
 )
+_TERMINOS_EVALUATIVOS = {
+    "corrupto", "corrupta", "corrupcion", "honesto", "honesta", "deshonesto", "deshonesta",
+    "mejor", "peor", "bueno", "buena", "malo", "mala", "competente", "incompetente",
+    "capaz", "incapaz", "viable", "inviable", "eficiente", "ineficiente", "confiable",
+    "inconfiable", "preparado", "preparada", "populista", "mentiroso", "mentirosa",
+}
+_MARCAS_COMPARACION = {"mas", "menos", "mejor", "peor", "mayor", "menor"}
+_MARCAS_CANDIDATURA = {"quien", "cual", "cuales", "candidato", "candidata", "candidatos", "candidatas"}
 _ANCLAS_PLAN = {
     "plan", "planes", "propuesta", "propuestas", "promesa", "promesas", "candidato", "candidatos",
     "candidatura", "candidaturas", "comparar", "comparacion", "diferencia", "diferencias", "similar",
@@ -30,6 +39,37 @@ def _terminos(texto: str) -> set[str]:
         termino for termino in re.findall(r"[a-záéíóúñü]{3,}", texto.casefold())
         if termino not in _PALABRAS_VACIAS
     }
+
+
+def _sin_tildes(texto: str) -> str:
+    normalizado = unicodedata.normalize("NFD", texto.casefold())
+    return "".join(caracter for caracter in normalizado if unicodedata.category(caracter) != "Mn")
+
+
+def _es_juicio_de_valor(pregunta: str) -> bool:
+    """Bloquea evaluaciones personales sin bloquear temas de política pública.
+
+    "¿Qué medidas plantea contra la corrupción?" es una consulta descriptiva
+    permitida. "¿Quién es más corrupto?" atribuye una conducta y se bloquea.
+    """
+    texto = _sin_tildes(pregunta)
+    palabras = set(re.findall(r"[a-zñ]{3,}", texto))
+    if (
+        re.search(r"\b(?:por|a)\s+(?:quien|cual)\b.*\bvot", texto)
+        or "recomiend" in texto
+        or any(marca in texto for marca in ("a quien apoyar", "quien gana", "quien ganaria", "probabilidad de ganar"))
+    ):
+        return True
+    evaluativos = palabras & _TERMINOS_EVALUATIVOS
+    if not evaluativos:
+        return False
+    # Comparar una cualidad de personas/candidaturas es un juicio de valor.
+    if palabras & _MARCAS_COMPARACION:
+        return True
+    if palabras & _MARCAS_CANDIDATURA and any(marca in palabras for marca in {"es", "son", "seria", "seran"}):
+        return True
+    # Afirmaciones o preguntas directas como "X es corrupto" o "¿es viable?".
+    return bool(re.search(r"\b(?:es|son|seria|seran)\s+(?:muy\s+)?(?:" + "|".join(_TERMINOS_EVALUATIVOS) + r")\b", texto))
 
 
 def seleccionar_evidencias(pregunta: str, promesas: list[dict[str, object]], limite: int = 8) -> list[dict[str, object]]:
@@ -48,7 +88,12 @@ def seleccionar_evidencias(pregunta: str, promesas: list[dict[str, object]], lim
 def pregunta_permitida(pregunta: str, promesas: list[dict[str, object]]) -> bool:
     """Filtro local: una pregunta no permitida nunca llega al proveedor IA."""
     normalizada = pregunta.casefold().strip()
-    if not normalizada or len(normalizada) > 600 or any(patron in normalizada for patron in _PATRONES_RIESGO):
+    if (
+        not normalizada
+        or len(normalizada) > 600
+        or any(patron in normalizada for patron in _PATRONES_RIESGO)
+        or _es_juicio_de_valor(pregunta)
+    ):
         return False
     terminos = _terminos(pregunta)
     if terminos & _ANCLAS_PLAN:

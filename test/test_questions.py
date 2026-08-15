@@ -20,6 +20,24 @@ def test_bloquea_prompt_injection_y_consulta_fuera_de_los_planes():
     assert evidencias == []
 
 
+def test_bloquea_juicios_de_valor_y_no_devuelve_evidencia():
+    promesas = [{"id": "p1", "categoria": "transparencia", "texto_original": "Implementar mecanismos de transparencia municipal."}]
+    respuesta, evidencias = responder_pregunta("¿Quién es más corrupto?", promesas)
+
+    assert respuesta == "Por favor, realice una pregunta relacionada con los planes de trabajo."
+    assert evidencias == []
+
+
+def test_bloquea_recomendacion_de_voto():
+    promesas = [{"id": "p1", "categoria": "movilidad", "texto_original": "Ampliar ciclovías barriales."}]
+    assert not pregunta_permitida("¿Por quién debería votar?", promesas)
+
+
+def test_permite_consulta_descriptiva_sobre_medidas_anticorrupcion():
+    promesas = [{"id": "p1", "categoria": "transparencia", "texto_original": "Implementar mecanismos contra la corrupción."}]
+    assert pregunta_permitida("¿Qué medidas propone contra la corrupción?", promesas)
+
+
 def test_permite_pregunta_sobre_ambito_de_evidencia():
     promesas = [{"categoria": "movilidad", "accion": "Ampliar", "objeto": "ciclovías", "texto_original": "Ampliar ciclovías barriales."}]
     assert pregunta_permitida("¿Qué plantea sobre ciclovías?", promesas)
