@@ -1,5 +1,6 @@
 # Extracción de PDF
 pdfplumber==0.11.4
+pypdf==5.1.0
 
 # IA / NLP
 openai==1.109.1

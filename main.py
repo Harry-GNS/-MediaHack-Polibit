@@ -31,6 +31,7 @@ def correr_flujo(
     organizacion_politica: str | None = None,
     max_fragmentos: int | None = None,
     usar_ia: bool = False,
+    plan_gobierno_url: str | None = None,
 ) -> None:
     # Validar el documento antes de modificar la base de datos. Así una ruta
     # escrita como ejemplo no deja una candidatura sin evidencia asociada.
@@ -40,7 +41,10 @@ def correr_flujo(
     candidato = Candidato(
         id=candidato_id,
         nombre=candidato_nombre,
-        plan_gobierno_url=ruta_pdf,
+        # Para documentos obtenidos del catálogo se conserva la URL pública;
+        # la ruta local sólo sirve a la extracción. Así la evidencia puede
+        # llevar de vuelta al PDF verificable en el navegador.
+        plan_gobierno_url=plan_gobierno_url or ruta_pdf,
         proceso_electoral_id=proceso_electoral_id,
         dignidad=dignidad,
         organizacion_politica=organizacion_politica,
@@ -143,6 +147,7 @@ if __name__ == "__main__":
             organizacion_politica,
             args.max_fragmentos,
             args.usar_ia,
+            candidatura.plan_url if args.cne_candidatura_id else None,
         )
     except (CNEError, FileNotFoundError, ValueError) as error:
         parser.error(str(error))

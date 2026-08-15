@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from src.extraction.ai_structurer import ConfiguracionIAError
+from src.extraction.text_normalizer import evidencia_estandarizada
 from src.comparison.service import comparar_promesas
 from src.ingest.cne_scraper import CNEError, ScraperCNE, listar_procesos
 from src.questions.answerer import responder_pregunta
@@ -43,6 +44,24 @@ class ComparacionRequest(BaseModel):
 
 def _error_cne(error: CNEError) -> HTTPException:
     return HTTPException(status_code=502, detail=str(error))
+
+
+def _con_enlaces_de_fuente(promesas: list[dict[str, object]]) -> list[dict[str, object]]:
+    """Estandariza citas legibles y adjunta la URL pública de verificación."""
+    candidatos = {str(candidato["id"]): candidato for candidato in listar_candidatos()}
+    resultado: list[dict[str, object]] = []
+    for promesa in promesas:
+        evidencia = evidencia_estandarizada(promesa)
+        if evidencia is None:
+            continue
+        candidato = candidatos.get(str(promesa.get("candidato")), {})
+        url = str(candidato.get("plan_gobierno_url") or "")
+        pagina = str(promesa.get("pagina_o_seccion") or "").strip()
+        if url.startswith(("https://", "http://")):
+            evidencia["enlace_documento"] = f"{url}#page={pagina}" if pagina.isdigit() else url
+        evidencia["nombre_candidato"] = candidato.get("nombre", promesa.get("candidato"))
+        resultado.append(evidencia)
+    return resultado
 
 
 @app.get("/", include_in_schema=False)
@@ -80,14 +99,14 @@ def promesas_de_candidato(candidato_id: str) -> list[dict[str, object]]:
     promesas = obtener_promesas([candidato_id])
     if not promesas:
         raise HTTPException(status_code=404, detail="No hay promesas procesadas para este candidato.")
-    return promesas
+    return _con_enlaces_de_fuente(promesas)
 
 
 @app.post("/preguntas")
 def preguntas_de_planes(solicitud: PreguntaRequest) -> dict[str, object]:
-    promesas = obtener_promesas(solicitud.candidato_ids or None)
+    promesas = _con_enlaces_de_fuente(obtener_promesas(solicitud.candidato_ids or None))
     if not promesas:
-        raise HTTPException(status_code=404, detail="No hay planes procesados para la selección actual.")
+        raise HTTPException(status_code=404, detail="No hay citas textuales legibles para la selección actual. Consulta el PDF fuente.")
     try:
         respuesta, evidencias = responder_pregunta(solicitud.pregunta, promesas)
     except ConfiguracionIAError as error:
@@ -102,7 +121,7 @@ def comparar_planes(solicitud: ComparacionRequest) -> dict[str, object]:
     promesas = obtener_promesas(solicitud.candidato_ids)
     if not promesas:
         raise HTTPException(status_code=404, detail="No hay evidencia procesada para las candidaturas seleccionadas.")
-    return comparar_promesas(promesas, solicitud.candidato_ids)
+    return comparar_promesas(_con_enlaces_de_fuente(promesas), solicitud.candidato_ids)
 
 
 @app.get("/procesos-electorales")
@@ -165,6 +184,8 @@ def _ejecutar_procesamiento(
                 candidatura.dignidad,
                 candidatura.organizacion_politica,
                 max_fragmentos,
+                False,
+                getattr(candidatura, "plan_url", None),
             )
         _TRABAJOS_PROCESAMIENTO[trabajo_id].update({
             "estado": "completado",

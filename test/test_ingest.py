@@ -1,5 +1,11 @@
 from src.extraction.segmenter import segmentar_documento
-from src.ingest.pdf_loader import PaginaTexto
+from src.ingest.pdf_loader import PaginaTexto, _texto_mas_legible
+
+
+def test_prioriza_extraccion_sin_letras_fragmentadas():
+    texto_fragmentado = "2.3 C o n s t r u c c i ó n d e a g u a s"
+    texto_legible = "2.3 Construcción de aguas"
+    assert _texto_mas_legible(texto_fragmentado, texto_legible) == texto_legible
 
 
 def test_segmentador_conserva_pagina_y_descarta_diagnostico():

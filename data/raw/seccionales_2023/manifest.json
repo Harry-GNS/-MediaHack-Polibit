@@ -40,7 +40,7 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-luisa-maldonado.pdf",
       "sha256": "e08cd61b368d44817c63e942f672cc3d52868f40f2c59ffd973762e22acd26a9",
-      "fecha_descarga_utc": "2026-08-15T14:24:50.150046+00:00",
+      "fecha_descarga_utc": "2026-08-15T15:52:40.009536+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -55,7 +55,7 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-pablo-ponce.pdf",
       "sha256": "389cf61ba388ff2db08169e7ca8cb8c03276e7bc4b316b7abff0105ffcbb1af0",
-      "fecha_descarga_utc": "2026-08-15T14:24:51.693746+00:00",
+      "fecha_descarga_utc": "2026-08-15T15:52:41.892831+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -134,5 +134,5 @@
       "content_type": "application/pdf"
     }
   ],
-  "generado_en_utc": "2026-08-15T15:18:22.792634+00:00"
+  "generado_en_utc": "2026-08-15T15:52:41.892892+00:00"
 }

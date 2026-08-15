@@ -38,11 +38,12 @@ def ambito_de_promesa(promesa: dict[str, object]) -> str:
 def _fila(promesa: dict[str, object]) -> dict[str, object]:
     return {
         "candidato": promesa.get("candidato", "Candidatura sin identificar"),
-        "propuesta": " ".join(
-            parte for parte in (str(promesa.get("accion") or "").strip(), str(promesa.get("objeto") or "").strip()) if parte
-        ),
+        # La tabla presenta la cita original, no un texto reconstruido por el
+        # extractor ni una interpretación del sistema.
+        "propuesta": str(promesa.get("texto_original") or "").strip(),
         "texto_original": promesa.get("texto_original", ""),
         "pagina_o_seccion": promesa.get("pagina_o_seccion", "No especificada"),
+        "enlace_documento": promesa.get("enlace_documento"),
     }
 
 
