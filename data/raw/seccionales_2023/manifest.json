@@ -23,9 +23,10 @@
       "pagina_catalogo_url": "https://www.cne.gob.ec/elecciones-seccionales-2023/",
       "organizacion_politica": null,
       "territorio": "Antonio Ante",
+      "nombre_fuente": "CNE",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-alcaldia-antonio-ante-martha-posso.pdf",
       "sha256": "66ff5ced9ec6f350625a4cf60d566647be1917255a3c73bab599fa8c18cd3bbd",
-      "fecha_descarga_utc": "2026-08-14T22:30:51.349864+00:00",
+      "fecha_descarga_utc": "2026-08-15T19:57:52.329872+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -40,7 +41,7 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-luisa-maldonado.pdf",
       "sha256": "e08cd61b368d44817c63e942f672cc3d52868f40f2c59ffd973762e22acd26a9",
-      "fecha_descarga_utc": "2026-08-15T19:20:20.847721+00:00",
+      "fecha_descarga_utc": "2026-08-15T20:07:05.150219+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -55,7 +56,7 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-pablo-ponce.pdf",
       "sha256": "389cf61ba388ff2db08169e7ca8cb8c03276e7bc4b316b7abff0105ffcbb1af0",
-      "fecha_descarga_utc": "2026-08-15T19:20:22.126372+00:00",
+      "fecha_descarga_utc": "2026-08-15T20:07:06.614894+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -70,7 +71,7 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-omar-cevallos.pdf",
       "sha256": "9d925be8f8bfda2894b9f2a0952142768175feaaf4d6df764ed5b9c526e1accc",
-      "fecha_descarga_utc": "2026-08-15T03:15:09.238718+00:00",
+      "fecha_descarga_utc": "2026-08-15T19:57:55.741113+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -85,7 +86,7 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-natasha-rojas.pdf",
       "sha256": "b167c7b7b26585be859cd4e7b3eaa0e2b8d2ee53508ca2da9477d795779e311d",
-      "fecha_descarga_utc": "2026-08-15T15:18:21.421308+00:00",
+      "fecha_descarga_utc": "2026-08-15T19:57:57.232534+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -100,7 +101,7 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-luz-elena-coloma.pdf",
       "sha256": "b96b048637f2a8d29f802a840036b3dde8a21f28e742a5bfe8139924cda6a1aa",
-      "fecha_descarga_utc": "2026-08-15T03:24:26.941506+00:00",
+      "fecha_descarga_utc": "2026-08-15T19:58:09.026771+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -115,7 +116,7 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-jessica-jaramillo.pdf",
       "sha256": "12f21c7f5cbacfd40fb22f74303249776313d9e0a71ab8f838cd865f82311801",
-      "fecha_descarga_utc": "2026-08-15T03:24:42.879753+00:00",
+      "fecha_descarga_utc": "2026-08-15T19:58:10.151609+00:00",
       "content_type": "application/pdf"
     },
     {
@@ -130,9 +131,84 @@
       "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
       "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-andres-paez.pdf",
       "sha256": "dcc87e72fda49803a8ffc24b15b13bd735b1334194b7daae98d4d052ea0ec0b2",
-      "fecha_descarga_utc": "2026-08-15T15:18:22.792576+00:00",
+      "fecha_descarga_utc": "2026-08-15T19:57:58.505055+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-jorge-yunda",
+      "nombre": "Jorge Yunda",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Jorge-Yunda.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-jorge-yunda.pdf",
+      "sha256": "7f4c2ee2a188ca644107935b690c744dfcade433b96af4330bc3f66193bc1c1d",
+      "fecha_descarga_utc": "2026-08-15T19:57:59.717472+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-pabel-munoz",
+      "nombre": "Pabel Munoz",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Pabel-Munoz.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-pabel-munoz.pdf",
+      "sha256": "5d31ec5c0aa250b10107b24932ef98b4427bc0ea2f9c5e705247b28367d76d09",
+      "fecha_descarga_utc": "2026-08-15T19:58:01.221869+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-maria-jose-carrion",
+      "nombre": "Maria Jose Carrion",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Maria-Jose-Carrion.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-maria-jose-carrion.pdf",
+      "sha256": "368335d2513d1e4b3eacfd50829d044cacc2d4828f4636b288caba53d671ff5a",
+      "fecha_descarga_utc": "2026-08-15T19:58:04.919780+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-pedro-freile",
+      "nombre": "Pedro Freile",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Pedro-Freile.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-pedro-freile.pdf",
+      "sha256": "2a9d565b2f2da2b4b8bd0eed929613e4bf178463f810607b4e37f1569b4c16cd",
+      "fecha_descarga_utc": "2026-08-15T19:58:06.158751+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-patricio-alarcon",
+      "nombre": "Patricio Alarcon",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Patricio-Alarcon.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-patricio-alarcon.pdf",
+      "sha256": "f2b5877c41f4366966052dc0642564f2b9a105b5f5648b8a1316d160b422c597",
+      "fecha_descarga_utc": "2026-08-15T19:58:11.339336+00:00",
       "content_type": "application/pdf"
     }
   ],
-  "generado_en_utc": "2026-08-15T19:20:22.126372+00:00"
+  "generado_en_utc": "2026-08-15T20:07:06.614894+00:00"
 }
