@@ -31,19 +31,11 @@ CNE_REQUEST_DELAY_SECONDS = float(os.getenv("CNE_REQUEST_DELAY_SECONDS", "0.7"))
 
 # --- IA (OpenRouter, API compatible con OpenAI) ---
 # Nunca se escriben secretos en este archivo ni en el repositorio.
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat-v3.1")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# Modelo gratuito con salida JSON fiable. Si se define OPENROUTER_MODEL en .env,
+# ese valor tiene prioridad para permitir elegir un modelo concreto conscientemente.
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-oss-20b:free")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-# Reduce llamadas HTTP sin perder una evidencia por fragmento. Para depurar
-# un modelo puede fijarse OPENROUTER_BATCH_SIZE=1 en el archivo .env local.
-OPENROUTER_BATCH_SIZE = int(os.getenv("OPENROUTER_BATCH_SIZE", "20"))
-OPENROUTER_TIMEOUT_SECONDS = float(os.getenv("OPENROUTER_TIMEOUT_SECONDS", "90"))
-# Límite conservador para cuentas con saldo reducido. El estructurador divide
-# automáticamente un lote cuando la respuesta no alcanza.
-OPENROUTER_MAX_OUTPUT_TOKENS = int(os.getenv("OPENROUTER_MAX_OUTPUT_TOKENS", "800"))
-# La demo opera con extracción y respuestas locales por defecto: 0 tokens.
-# La IA sólo se activa expresamente desde CLI o configurando esta variable.
-OPENROUTER_PREGUNTAS_HABILITADO = os.getenv("OPENROUTER_PREGUNTAS_HABILITADO", "false").casefold() == "true"
 
 # --- Fuentes oficiales (completar con endpoints reales durante el hackathon) ---
 CNE_PLANES_URL = os.getenv("CNE_PLANES_URL", "")
