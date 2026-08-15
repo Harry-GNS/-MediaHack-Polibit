@@ -175,7 +175,7 @@ export default function ResultsPage() {
       <AuditDrawer 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)}
-        evidenceData={drawerData}
+        data={drawerData}
       />
     </motion.main>
   );

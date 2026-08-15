@@ -36,10 +36,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="pointer-events-auto">
             <img src="/CondorLens.png" alt="CondorLens" className="w-12 h-auto drop-shadow-[0_0_15px_rgba(0,210,255,0.4)] opacity-80 hover:opacity-100 transition-opacity" />
           </Link>
-          
-          <div className="text-[10px] uppercase tracking-[0.3em] font-mono text-gray-500">
-            [SYS: OPERATIONAL]
-          </div>
         </header>
 
         {children}

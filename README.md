@@ -4,6 +4,7 @@ Repositorio creado durante el hackathon MediaHack II: Inteligencia Artificial, D
 
 ## Flujo de planes oficiales del CNE
 
+
 El frontend primero consulta `GET /procesos-electorales`, presenta esas opciones
 en su selector y luego usa `GET /procesos-electorales/{id}/candidaturas`. Al
 confirmar candidatos, llama a `POST /procesos-electorales/{id}/descargar-planes`

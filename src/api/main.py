@@ -1,26 +1,39 @@
-"""Endpoints que alimentan el selector de proceso electoral del frontend."""
+"""Endpoints que alimentan el selector de proceso electoral y verificación del frontend."""
 from __future__ import annotations
 
-from pathlib import Path
 import logging
+from pathlib import Path
+from typing import List
 from uuid import uuid4
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+from src.comparison.service import comparar_promesas
 from src.extraction.ai_structurer import ConfiguracionIAError
 from src.extraction.text_normalizer import evidencia_estandarizada
-from src.comparison.service import comparar_promesas
 from src.ingest.cne_scraper import CNEError, ScraperCNE, listar_cantones, listar_procesos
 from src.questions.answerer import responder_pregunta
 from src.storage.db import listar_candidatos, obtener_promesas
+from src.validation.source_validator import validar_fuentes, validar_url_publica
 
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 app = FastAPI(title="Evidencia Municipal", version="0.2.0")
 logger = logging.getLogger(__name__)
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+# Habilitar CORS para el frontend Next.js
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 _TRABAJOS_PROCESAMIENTO: dict[str, dict[str, object]] = {}
 
 
@@ -40,6 +53,16 @@ class PreguntaRequest(BaseModel):
 
 class ComparacionRequest(BaseModel):
     candidato_ids: list[str] = Field(min_length=2, max_length=2)
+
+
+class ValidarFuentesRequest(BaseModel):
+    texto: str = Field(min_length=1, max_length=8000)
+    fuentes: list[str] = Field(min_length=1, max_length=10)
+
+    @field_validator("fuentes")
+    @classmethod
+    def fuentes_publicas(cls, fuentes: list[str]) -> list[str]:
+        return [validar_url_publica(fuente) for fuente in fuentes]
 
 
 def _error_cne(error: CNEError) -> HTTPException:
@@ -122,6 +145,12 @@ def comparar_planes(solicitud: ComparacionRequest) -> dict[str, object]:
     if not promesas:
         raise HTTPException(status_code=404, detail="No hay evidencia procesada para las candidaturas seleccionadas.")
     return comparar_promesas(_con_enlaces_de_fuente(promesas), solicitud.candidato_ids)
+
+
+@app.post("/validar")
+def validar_texto_con_fuentes(solicitud: ValidarFuentesRequest) -> list[dict[str, object]]:
+    """Busca evidencia literal, sin IA ni juicios sobre la veracidad del dato."""
+    return validar_fuentes(solicitud.texto, solicitud.fuentes)
 
 
 @app.get("/procesos-electorales")
@@ -303,7 +332,6 @@ def ancla_de_confianza(
             "fuente": f"Plan oficial · Pág. {promesa.get('pagina_o_seccion', 's/d')}",
             "fuente_url": promesa.get("enlace_documento"),
         })
-
 
     cantidades = [
         float(a["cantidad"])

@@ -246,10 +246,27 @@ export default function ComparacionPage() {
             </div>
           </div>
           {vista && <div className="mt-5"><p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-gray-500">{vista === "similitudes" ? "Propuestas relacionadas por ámbito" : "Ámbitos no compartidos"}</p><TablaComparacion grupos={grupos} candidatos={candidatosSeleccionados} /></div>}
-        </div>
-        <aside className="rounded-2xl border border-accent/20 bg-[#061c29] p-5 md:p-7"><h2 className="text-xl">Pregunta a los planes</h2><p className="mt-2 text-sm leading-relaxed text-gray-300">Pregunta sólo por propuestas de los planes procesados. Las consultas fuera de ese ámbito se bloquean de forma segura.</p>
-          <form onSubmit={preguntar} className="mt-5"><textarea value={pregunta} onChange={event => setPregunta(event.target.value)} maxLength={600} placeholder="Ej. ¿Qué proponen sobre seguridad y espacio público?" className="min-h-28 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-sm outline-none focus:border-accent" /><button className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-dark"><Search className="h-4 w-4" /> Preguntar con evidencia</button></form>
-          {respuesta && <div className="mt-6 border-t border-white/10 pt-5"><h3 className="text-sm font-medium text-accent">Fragmentos textuales recuperados</h3><p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">{respuesta}</p>{evidencias.length > 0 && <div className="mt-5 overflow-x-auto rounded-xl border border-white/10"><table className="w-full min-w-[560px] text-left text-xs"><thead className="bg-white/5 text-gray-400"><tr><th className="p-3">Candidatura</th><th className="p-3">Cita textual del plan</th><th className="p-3">Fuente</th></tr></thead><tbody className="divide-y divide-white/10">{evidencias.map((item, index) => <tr className="align-top transition-colors hover:bg-white/[.02]" key={`${item.id}-${index}`}><td className="p-3">{item.nombre_candidato ?? item.candidato}</td><td className="whitespace-pre-wrap p-3 leading-relaxed text-gray-300">{citaTextual(item)}<div className="mt-3"><button onClick={() => setPromesaAncla(item)} className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest text-amber-400 transition-colors hover:bg-amber-500/20"><Anchor className="h-3 w-3" /> Ver contexto histórico</button></div></td><td className="p-3"><EnlaceFuente item={item} /></td></tr>)}</tbody></table></div>}</div>}
+        {/* Pregunta a los planes */}
+        <aside className="flex flex-col">
+          <h2 className="text-[10px] font-mono uppercase tracking-[0.3em] text-accent mb-6">Pregunta a los planes</h2>
+          <p className="text-sm text-gray-500 font-light mb-10 max-w-sm">Pregunta sólo por propuestas de los planes procesados. Las consultas fuera de ese ámbito se bloquean de forma segura.</p>
+          
+          <form onSubmit={preguntar} className="flex flex-col relative group">
+            <div className="relative w-full min-h-[15vh]">
+              <textarea value={pregunta} onChange={event => setPregunta(event.target.value)} maxLength={600} placeholder="Ej. ¿Qué proponen sobre seguridad y espacio público?" spellCheck="false" className="w-full h-full bg-transparent resize-none focus:outline-none text-xl md:text-2xl font-light leading-[1.4] placeholder-white/20 text-white/90" />
+              <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/10 group-focus-within:bg-white/40 transition-colors duration-700"></div>
+              <div className="absolute -bottom-6 right-0 text-[10px] font-mono text-gray-600 tracking-widest">{pregunta.length} / 600</div>
+            </div>
+            
+            <div className="mt-12 flex justify-end">
+              <button disabled={!pregunta.trim()} className="group relative px-6 py-4 bg-white text-dark rounded-full overflow-hidden disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
+                <div className="absolute inset-0 w-full h-full bg-accent -translate-x-full group-hover:translate-x-0 transition-transform duration-700 ease-[0.16,1,0.3,1]"></div>
+                <span className="relative z-10 text-[10px] font-bold tracking-[0.2em] uppercase group-hover:text-white transition-colors duration-700 flex items-center gap-3"><Search className="w-3 h-3" /> Preguntar con evidencia</span>
+              </button>
+            </div>
+          </form>
+          
+          {respuesta && <div className="mt-16 pt-10 border-t border-white/5"><h3 className="text-[10px] font-mono uppercase tracking-[0.3em] text-accent mb-6">Fragmentos textuales recuperados</h3><p className="whitespace-pre-wrap text-xl md:text-2xl font-light leading-relaxed text-white/90 mb-10">{respuesta}</p>{evidencias.length > 0 && <div className="w-full overflow-x-auto"><table className="w-full min-w-[560px] text-left text-sm border-t border-white/10"><thead className="text-[10px] font-mono uppercase tracking-[0.3em] text-gray-500"><tr><th className="py-6 pr-4 font-normal w-1/4">Candidatura</th><th className="py-6 px-4 font-normal w-1/2">Cita textual del plan</th><th className="py-6 pl-4 font-normal text-right">Fuente</th></tr></thead><tbody className="divide-y divide-white/5">{evidencias.map((item, index) => <tr key={`${item.id}-${index}`} className="group hover:bg-white/[0.02] transition-colors"><td className="py-6 pr-4 text-white font-medium align-top">{item.nombre_candidato ?? item.candidato}</td><td className="py-6 px-4 text-gray-400 font-light text-sm leading-relaxed align-top whitespace-pre-wrap">{citaTextual(item)}<div className="mt-3"><button onClick={() => setPromesaAncla(item)} className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest text-amber-400 transition-colors hover:bg-amber-500/20"><Anchor className="h-3 w-3" /> Ver contexto histórico</button></div></td><td className="py-6 pl-4 text-gray-500 align-top text-right"><EnlaceFuente item={item} /></td></tr>)}</tbody></table></div>}</div>}
         </aside>
       </section>
 
