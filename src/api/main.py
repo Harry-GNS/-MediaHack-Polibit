@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from src.extraction.ai_structurer import ConfiguracionIAError
+from src.comparison.service import comparar_promesas
 from src.ingest.cne_scraper import CNEError, ScraperCNE, listar_procesos
 from src.questions.answerer import responder_pregunta
 from src.storage.db import listar_candidatos, obtener_promesas
@@ -32,6 +33,10 @@ class ProcesarPlanesRequest(BaseModel):
 class PreguntaRequest(BaseModel):
     pregunta: str = Field(min_length=8, max_length=600)
     candidato_ids: list[str] = Field(default_factory=list, max_length=5)
+
+
+class ComparacionRequest(BaseModel):
+    candidato_ids: list[str] = Field(min_length=2, max_length=2)
 
 
 def _error_cne(error: CNEError) -> HTTPException:
@@ -82,6 +87,14 @@ def preguntas_de_planes(solicitud: PreguntaRequest) -> dict[str, object]:
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return {"respuesta": respuesta, "evidencias": evidencias}
+
+
+@app.post("/comparaciones")
+def comparar_planes(solicitud: ComparacionRequest) -> dict[str, object]:
+    promesas = obtener_promesas(solicitud.candidato_ids)
+    if not promesas:
+        raise HTTPException(status_code=404, detail="No hay evidencia procesada para las candidaturas seleccionadas.")
+    return comparar_promesas(promesas, solicitud.candidato_ids)
 
 
 @app.get("/procesos-electorales")

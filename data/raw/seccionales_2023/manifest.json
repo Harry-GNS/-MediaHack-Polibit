@@ -53,7 +53,37 @@
       "sha256": "389cf61ba388ff2db08169e7ca8cb8c03276e7bc4b316b7abff0105ffcbb1af0",
       "fecha_descarga_utc": "2026-08-14T23:34:06.679281+00:00",
       "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-omar-cevallos",
+      "nombre": "Omar Cevallos",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Omar-Cevallos.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-omar-cevallos.pdf",
+      "sha256": "9d925be8f8bfda2894b9f2a0952142768175feaaf4d6df764ed5b9c526e1accc",
+      "fecha_descarga_utc": "2026-08-15T02:46:25.490104+00:00",
+      "content_type": "application/pdf"
+    },
+    {
+      "id": "seccionales_2023-quito-natasha-rojas",
+      "nombre": "Natasha Rojas",
+      "proceso_electoral_id": "seccionales_2023",
+      "dignidad": "Alcaldía de Quito",
+      "plan_url": "https://seccionales2023.ecuador-decide.org/wp-content/uploads/2022/12/Natasha-Rojas.pdf",
+      "pagina_catalogo_url": "https://seccionales2023.ecuador-decide.org/quitodecide-comparador/",
+      "organizacion_politica": null,
+      "territorio": "Quito",
+      "nombre_fuente": "QuitoDecide / Ecuador Decide (archivo público)",
+      "archivo_local": "data\\raw\\seccionales_2023\\seccionales-2023-quito-natasha-rojas.pdf",
+      "sha256": "b167c7b7b26585be859cd4e7b3eaa0e2b8d2ee53508ca2da9477d795779e311d",
+      "fecha_descarga_utc": "2026-08-15T02:46:26.644984+00:00",
+      "content_type": "application/pdf"
     }
   ],
-  "generado_en_utc": "2026-08-14T23:34:06.679328+00:00"
+  "generado_en_utc": "2026-08-15T02:46:26.645021+00:00"
 }
