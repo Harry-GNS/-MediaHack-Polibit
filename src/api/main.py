@@ -8,7 +8,7 @@ from uuid import uuid4
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.extraction.ai_structurer import ConfiguracionIAError
 from src.extraction.text_normalizer import evidencia_estandarizada
@@ -16,6 +16,7 @@ from src.comparison.service import comparar_promesas
 from src.ingest.cne_scraper import CNEError, ScraperCNE, listar_cantones, listar_procesos
 from src.questions.answerer import responder_pregunta
 from src.storage.db import listar_candidatos, obtener_promesas
+from src.validation.source_validator import validar_fuentes, validar_url_publica
 
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 app = FastAPI(title="Evidencia Municipal", version="0.2.0")
@@ -40,6 +41,21 @@ class PreguntaRequest(BaseModel):
 
 class ComparacionRequest(BaseModel):
     candidato_ids: list[str] = Field(min_length=2, max_length=2)
+
+
+class ValidarFuentesRequest(BaseModel):
+    """Solicitud limitada para el contraste textual de la vista /verify."""
+
+    texto: str = Field(min_length=3, max_length=8_000)
+    fuentes: list[str] = Field(min_length=1, max_length=5)
+
+    @field_validator("fuentes")
+    @classmethod
+    def fuentes_publicas(cls, fuentes: list[str]) -> list[str]:
+        normalizadas = [validar_url_publica(fuente) for fuente in fuentes]
+        if len(set(normalizadas)) != len(normalizadas):
+            raise ValueError("No repitas una misma fuente.")
+        return normalizadas
 
 
 def _error_cne(error: CNEError) -> HTTPException:
@@ -122,6 +138,12 @@ def comparar_planes(solicitud: ComparacionRequest) -> dict[str, object]:
     if not promesas:
         raise HTTPException(status_code=404, detail="No hay evidencia procesada para las candidaturas seleccionadas.")
     return comparar_promesas(_con_enlaces_de_fuente(promesas), solicitud.candidato_ids)
+
+
+@app.post("/validar")
+def validar_texto_con_fuentes(solicitud: ValidarFuentesRequest) -> list[dict[str, object]]:
+    """Busca evidencia literal, sin IA ni juicios sobre la veracidad del dato."""
+    return validar_fuentes(solicitud.texto, solicitud.fuentes)
 
 
 @app.get("/procesos-electorales")

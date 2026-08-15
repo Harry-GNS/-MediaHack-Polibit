@@ -7,13 +7,24 @@ import { ArrowLeft, Plus, X, LoaderCircle, CheckCircle, XCircle, AlertTriangle, 
 
 type Tab = 'text' | 'links';
 
+type ResultadoValidacion = {
+  estado: 'concordante' | 'discrepante' | 'no_encontrado';
+  porcentaje: number;
+  diferencias: string | null;
+  fuente_url: string;
+  valor_en_fuente: string | null;
+  alerta: string;
+};
+
+const esUrlHttp = (valor: string) => /^https?:\/\/[^\s]+$/i.test(valor.trim());
+
 export default function VerifyPage() {
   const router = useRouter();
   const [prompt, setPrompt] = useState('');
   const [sources, setSources] = useState<string[]>(['']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<any[] | null>(null);
+  const [results, setResults] = useState<ResultadoValidacion[] | null>(null);
 
   const handleAddSource = () => {
     if (sources.length < 5) setSources([...sources, '']);
@@ -32,8 +43,9 @@ export default function VerifyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validSources = sources.filter(s => s.trim() !== '');
-    if (!prompt.trim() || validSources.length === 0) {
+    const fuentesIngresadas = sources.filter(s => s.trim() !== '');
+    const validSources = fuentesIngresadas.filter(esUrlHttp);
+    if (!prompt.trim() || validSources.length === 0 || validSources.length !== fuentesIngresadas.length) {
       setError("Por favor ingresa el dato a comprobar y al menos una URL válida.");
       return;
     }
@@ -46,7 +58,7 @@ export default function VerifyPage() {
       const res = await fetch('/backend/validar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texto: prompt, fuentes: validSources })
+        body: JSON.stringify({ texto: prompt.trim().slice(0, 8000), fuentes: validSources })
       });
 
       if (!res.ok) {
@@ -54,16 +66,17 @@ export default function VerifyPage() {
         throw new Error(errData?.detail || `Error ${res.status}: Falló la conexión con el auditor.`);
       }
 
-      const data = await res.json();
-      setResults(data);
+      const data: unknown = await res.json();
+      if (!Array.isArray(data)) throw new Error('El auditor devolvió una respuesta no válida.');
+      setResults(data as ResultadoValidacion[]);
       
       // Auto-scroll to results
       setTimeout(() => {
         document.getElementById('audit-results')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
       
-    } catch (err: any) {
-      setError(err.message || "Ocurrió un error inesperado al procesar la auditoría.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Ocurrió un error inesperado al procesar la auditoría.");
     } finally {
       setLoading(false);
     }
@@ -96,14 +109,14 @@ export default function VerifyPage() {
           <div className="relative group w-full min-h-[20vh] lg:min-h-[25vh]">
             <textarea
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value.slice(0, 20000))}
+              onChange={(e) => setPrompt(e.target.value.slice(0, 8000))}
               placeholder="Pega la declaración, noticia o frase aquí..."
               spellCheck="false"
               className="w-full h-full bg-transparent resize-none focus:outline-none text-2xl md:text-4xl lg:text-5xl font-light font-playfair leading-[1.2] placeholder-white/10 text-white/90"
             />
             <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white/10 group-focus-within:bg-white/40 transition-colors duration-700"></div>
             <div className="absolute -bottom-8 right-0 text-[10px] font-mono text-gray-600 tracking-widest">
-              {prompt.length} / 30 000
+              {prompt.length} / 8 000
             </div>
           </div>
         </div>
