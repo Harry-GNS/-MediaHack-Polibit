@@ -286,19 +286,24 @@ def ancla_de_confianza(
     antecedentes = []
     for promesa in relevantes[:10]:
         cand = candidatos_bd.get(str(promesa.get("candidato", "")), {})
+        cat = promesa.get("categoria")
+        acc = promesa.get("accion")
+        obj = promesa.get("objeto")
+        plz = promesa.get("plazo")
         antecedentes.append({
             "candidato": cand.get("nombre", promesa.get("nombre_candidato", "Candidatura registrada")),
             "proceso_electoral_id": cand.get("dignidad") or cand.get("proceso_electoral_id") or "Elecciones Oficiales",
-            "categoria": promesa.get("categoria"),
-            "accion": promesa.get("accion"),
-            "objeto": promesa.get("objeto"),
+            "categoria": None if str(cat).lower() == "no_especificado" else cat,
+            "accion": None if str(acc).lower() == "no_especificado" else acc,
+            "objeto": None if str(obj).lower() == "no_especificado" else obj,
             "cantidad": promesa.get("cantidad"),
             "unidad": promesa.get("unidad"),
-            "plazo": promesa.get("plazo"),
+            "plazo": None if str(plz).lower() == "no_especificado" else plz,
             "texto": promesa.get("texto_original", "")[:280],
             "fuente": f"Plan oficial · Pág. {promesa.get('pagina_o_seccion', 's/d')}",
             "fuente_url": promesa.get("enlace_documento"),
         })
+
 
     cantidades = [
         float(a["cantidad"])

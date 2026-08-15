@@ -55,10 +55,18 @@ export default function AnclaConfianza({ candidatoIds, promesa }: Props) {
 
   if (!promesa || (!cargando && (!data || data.total_antecedentes === 0))) return null;
 
-  const propuesta = (a: Antecedente) =>
-    [a.accion, a.objeto, a.cantidad != null ? `${a.cantidad}${a.unidad ? ` ${a.unidad}` : ""}` : null]
-      .filter(Boolean)
-      .join(" ") || a.texto.slice(0, 120);
+  const propuesta = (a: Antecedente) => {
+    const partes = [
+      a.accion && a.accion.toLowerCase() !== "no_especificado" ? a.accion : null,
+      a.objeto && a.objeto.toLowerCase() !== "no_especificado" ? a.objeto : null,
+      a.cantidad != null ? `${a.cantidad}${a.unidad ? ` ${a.unidad}` : ""}` : null,
+    ].filter(Boolean);
+    const resultado = partes.join(" ").trim();
+    if (!resultado || resultado.toLowerCase() === "no_especificado") return null;
+    // Si el texto ya comienza con este resumen, no duplicarlo
+    if (a.texto.toLowerCase().startsWith(resultado.toLowerCase())) return null;
+    return resultado;
+  };
 
   return (
     <section className="mt-16 border-t border-amber-500/20 pt-12">
@@ -114,7 +122,7 @@ export default function AnclaConfianza({ candidatoIds, promesa }: Props) {
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <span className="rounded bg-cyan-900/30 px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider text-cyan-400 uppercase">
-                        {a.categoria ?? "NO_ESPECIFICADO"}
+                        {a.categoria && a.categoria.toLowerCase() !== "no_especificado" ? a.categoria : "Plan Oficial"}
                       </span>
                       {a.plazo && <span className="font-mono text-[9px] tracking-widest text-gray-500 uppercase">Plazo: {a.plazo}</span>}
                     </div>
